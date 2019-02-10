@@ -5,12 +5,77 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"reflect"
 	"testing"
 
 	"github.com/nojima/httpie-go/input"
 )
+
+func parseURL(t *testing.T, rawurl string) *url.URL {
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		t.Errorf("failed to parse URL: %s", err)
+	}
+	return u
+}
+
+func TestBuildHttpRequest(t *testing.T) {
+	// Setup
+	request := &input.Request{
+		Method: input.Method("POST"),
+		URL:    parseURL(t, "https://localhost:8080/foo"),
+		Parameters: []input.Field{
+			{Name: "q", Value: "hello world"},
+		},
+		Header: input.Header{
+			Fields: []input.Field{
+				{Name: "X-Foo", Value: "fizz buzz"},
+				{Name: "Host", Value: "example.com:8080"},
+			},
+		},
+		Body: input.Body{
+			BodyType: input.JsonBody,
+			Fields: []input.Field{
+				{Name: "hoge", Value: "fuga"},
+			},
+		},
+	}
+
+	// Exercise
+	actual, err := buildHttpRequest(request)
+	if err != nil {
+		t.Errorf("unexpected error: err=%v", err)
+	}
+
+	// Verify
+	if actual.Method != "POST" {
+		t.Errorf("unexpected method: expected=%v, actual=%v", "POST", actual.Method)
+	}
+	expectedURL := parseURL(t, "https://example.com:8080/foo?q=hello+world")
+	if actual.URL != expectedURL {
+		t.Errorf("unexpected URL: expected=%v, actual=%v", expectedURL, actual.URL)
+	}
+	expectedHeader := http.Header{
+		"X-Foo":        []string{"fizz buzz"},
+		"Content-Type": []string{"application/json"},
+		"User-Agent":   []string{"httpie-go/0.0.0"},
+		"Host":         []string{"example.com:8080"},
+	}
+	if !reflect.DeepEqual(expectedHeader, actual.Header) {
+		t.Errorf("unexpected header: expected=%v, actual=%v", expectedHeader, actual.Header)
+	}
+	expectedHost := "example.com:8080"
+	if actual.Host != expectedHost {
+		t.Errorf("unexpected host: expected=%v, actual=%v", expectedHost, actual.Host)
+	}
+	expectedBody := `{"hoge": "fuga"}`
+	actualBody := readAll(t, actual.Body)
+	if !isEquivalentJson(t, expectedBody, actualBody) {
+		t.Errorf("unexpected body: expected=%v, actual=%v", expectedBody, actualBody)
+	}
+}
 
 func makeTempFile(t *testing.T, content string) string {
 	tmpfile, err := ioutil.TempFile("", "httpie-go-test-")
