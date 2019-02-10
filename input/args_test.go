@@ -151,3 +151,96 @@ func TestParseItem(t *testing.T) {
 		})
 	}
 }
+
+func TestParseUrl(t *testing.T) {
+	testCases := []struct {
+		title    string
+		input    string
+		expected url.URL
+	}{
+		{
+			title: "Typical case",
+			input: "http://example.com/hello/world",
+			expected: url.URL{
+				Scheme: "http",
+				Host:   "example.com",
+				Path:   "/hello/world",
+			},
+		},
+		{
+			title: "No scheme",
+			input: "example.com/hello/world",
+			expected: url.URL{
+				Scheme: "http",
+				Host:   "example.com",
+				Path:   "/hello/world",
+			},
+		},
+		{
+			title: "No host and port",
+			input: "/hello/world",
+			expected: url.URL{
+				Scheme: "http",
+				Host:   "localhost",
+				Path:   "/hello/world",
+			},
+		},
+		{
+			title: "No host and port but has colon",
+			input: ":/foo",
+			expected: url.URL{
+				Scheme: "http",
+				Host:   "localhost",
+				Path:   "/foo",
+			},
+		},
+		{
+			title: "Only colon",
+			input: ":",
+			expected: url.URL{
+				Scheme: "http",
+				Host:   "localhost",
+				Path:   "/",
+			},
+		},
+		{
+			title: "No host but has port",
+			input: ":8080/hello/world",
+			expected: url.URL{
+				Scheme: "http",
+				Host:   "localhost:8080",
+				Path:   "/hello/world",
+			},
+		},
+		{
+			title: "Has query parameters",
+			input: "http://example.com/?q=hello&lang=ja",
+			expected: url.URL{
+				Scheme:   "http",
+				Host:     "example.com",
+				Path:     "/",
+				RawQuery: "q=hello&lang=ja",
+			},
+		},
+		{
+			title: "No path",
+			input: "https://example.com",
+			expected: url.URL{
+				Scheme: "https",
+				Host:   "example.com",
+				Path:   "/",
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.title, func(t *testing.T) {
+			u, err := parseUrl(tt.input)
+			if err != nil {
+				t.Errorf("unexpected error: err=%v", err)
+			}
+			if !reflect.DeepEqual(*u, tt.expected) {
+				t.Errorf("unexpected result: expected=%+v, actual=%+v", tt.expected, *u)
+			}
+		})
+	}
+}

@@ -12,6 +12,7 @@ import (
 var (
 	reMethod          = regexp.MustCompile(`^[a-zA-Z0-9]+$`)
 	reHeaderFieldName = regexp.MustCompile("^[-!#$%&'*+.^_|~a-zA-Z0-9]+$")
+	reScheme          = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+-.]*://`)
 	emptyMethod       = Method("")
 )
 
@@ -65,9 +66,26 @@ func parseMethod(s string) (Method, error) {
 }
 
 func parseUrl(s string) (*url.URL, error) {
+	defaultScheme := "http"
+	defaultHost := "localhost"
+
+	// ex) :8080/hello or /hello
+	if strings.HasPrefix(s, ":") || strings.HasPrefix(s, "/") {
+		s = defaultHost + s
+	}
+
+	// ex) example.com/hello
+	if !reScheme.MatchString(s) {
+		s = defaultScheme + "://" + s
+	}
+
 	u, err := url.Parse(s)
 	if err != nil {
 		return nil, errors.Errorf("Invalid URL: %s", s)
+	}
+	u.Host = strings.TrimSuffix(u.Host, ":")
+	if u.Path == "" {
+		u.Path = "/"
 	}
 	return u, nil
 }
