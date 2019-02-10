@@ -93,6 +93,35 @@ func TestBuildURL(t *testing.T) {
 			},
 			expected: "http://example.com/hello?fizz=buzz&foo=bar",
 		},
+		{
+			title: "Both URL and Parameters have query string",
+			url:   "http://example.com/hello?hoge=fuga",
+			parameters: []input.Field{
+				{Name: "foo", Value: "bar"},
+				{Name: "fizz", Value: "buzz"},
+			},
+			expected: "http://example.com/hello?fizz=buzz&foo=bar&hoge=fuga",
+		},
+		{
+			title: "Multiple values with a key",
+			url:   "http://example.com/hello",
+			parameters: []input.Field{
+				{Name: "foo", Value: "value 1"},
+				{Name: "foo", Value: "value 2"},
+				{Name: "foo", Value: "value 3"},
+			},
+			expected: "http://example.com/hello?foo=value+1&foo=value+2&foo=value+3",
+		},
+		{
+			title: "Multiple values with a key in both URL and Parameters",
+			url:   "http://example.com/hello?foo=a&foo=z",
+			parameters: []input.Field{
+				{Name: "foo", Value: "value 1"},
+				{Name: "foo", Value: "value 2"},
+				{Name: "foo", Value: "value 3"},
+			},
+			expected: "http://example.com/hello?foo=a&foo=z&foo=value+1&foo=value+2&foo=value+3",
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.title, func(t *testing.T) {
