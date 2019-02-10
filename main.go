@@ -29,7 +29,7 @@ func innerMain() error {
 	defer resp.Body.Close()
 
 	// Print response
-	printer := output.NewPlainPrinter(os.Stdout)
+	printer := output.NewPrettyPrinter(os.Stdout)
 	if err := printer.PrintHeader(resp); err != nil {
 		return err
 	}
