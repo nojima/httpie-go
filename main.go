@@ -5,16 +5,12 @@ import (
 	"os"
 
 	"github.com/nojima/httpie-go/input"
+	"github.com/nojima/httpie-go/output"
 	"github.com/nojima/httpie-go/request"
 	"github.com/pborman/getopt"
-	"github.com/pkg/errors"
 )
 
-func hello() error {
-	return errors.New("Hello")
-}
-
-func main() {
+func innerMain() error {
 	// Parse flags
 	getopt.Parse()
 
@@ -22,12 +18,31 @@ func main() {
 	args := getopt.Args()
 	req, err := input.ParseArgs(args)
 	if err != nil {
-		fmt.Printf("ERROR: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 
-	if err := request.SendRequest(req); err != nil {
-		fmt.Printf("ERROR: %v\n", err)
+	// Send request and receive response
+	resp, err := request.SendRequest(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Print response
+	printer := output.NewPlainPrinter(os.Stdout)
+	if err := printer.PrintHeader(resp); err != nil {
+		return err
+	}
+	if err := printer.PrintBody(resp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func main() {
+	if err := innerMain(); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		os.Exit(1)
 	}
 }
