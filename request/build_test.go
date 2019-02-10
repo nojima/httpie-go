@@ -25,7 +25,7 @@ func TestBuildHttpRequest(t *testing.T) {
 	// Setup
 	request := &input.Request{
 		Method: input.Method("POST"),
-		URL:    parseURL(t, "https://localhost:8080/foo"),
+		URL:    parseURL(t, "https://localhost:4000/foo"),
 		Parameters: []input.Field{
 			{Name: "q", Value: "hello world"},
 		},
@@ -53,8 +53,8 @@ func TestBuildHttpRequest(t *testing.T) {
 	if actual.Method != "POST" {
 		t.Errorf("unexpected method: expected=%v, actual=%v", "POST", actual.Method)
 	}
-	expectedURL := parseURL(t, "https://example.com:8080/foo?q=hello+world")
-	if actual.URL != expectedURL {
+	expectedURL := parseURL(t, "https://localhost:4000/foo?q=hello+world")
+	if !reflect.DeepEqual(actual.URL, expectedURL) {
 		t.Errorf("unexpected URL: expected=%v, actual=%v", expectedURL, actual.URL)
 	}
 	expectedHeader := http.Header{
@@ -74,6 +74,40 @@ func TestBuildHttpRequest(t *testing.T) {
 	actualBody := readAll(t, actual.Body)
 	if !isEquivalentJson(t, expectedBody, actualBody) {
 		t.Errorf("unexpected body: expected=%v, actual=%v", expectedBody, actualBody)
+	}
+}
+
+func TestBuildURL(t *testing.T) {
+	testCases := []struct {
+		title      string
+		url        string
+		parameters []input.Field
+		expected   string
+	}{
+		{
+			title: "Typical case",
+			url:   "http://example.com/hello",
+			parameters: []input.Field{
+				{Name: "foo", Value: "bar"},
+				{Name: "fizz", Value: "buzz"},
+			},
+			expected: "http://example.com/hello?fizz=buzz&foo=bar",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.title, func(t *testing.T) {
+			request := &input.Request{
+				URL:        parseURL(t, tt.url),
+				Parameters: tt.parameters,
+			}
+			u, err := buildURL(request)
+			if err != nil {
+				t.Fatalf("unexpected error: err=%v", err)
+			}
+			if u.String() != tt.expected {
+				t.Errorf("unexpected URL: expected=%s, actual=%s", tt.expected, u)
+			}
+		})
 	}
 }
 

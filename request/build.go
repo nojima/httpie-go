@@ -14,6 +14,11 @@ import (
 )
 
 func buildHttpRequest(request *input.Request) (*http.Request, error) {
+	u, err := buildURL(request)
+	if err != nil {
+		return nil, err
+	}
+
 	header, err := buildHttpHeader(request)
 	if err != nil {
 		return nil, err
@@ -33,13 +38,31 @@ func buildHttpRequest(request *input.Request) (*http.Request, error) {
 
 	r := http.Request{
 		Method:        string(request.Method),
-		URL:           request.URL,
+		URL:           u,
 		Header:        header,
 		Host:          header.Get("Host"),
 		Body:          bodyTuple.body,
 		ContentLength: bodyTuple.contentLength,
 	}
 	return &r, nil
+}
+
+func buildURL(request *input.Request) (*url.URL, error) {
+	q, err := url.ParseQuery(request.URL.RawQuery)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing query string")
+	}
+	for _, field := range request.Parameters {
+		value, err := resolveFieldValue(field)
+		if err != nil {
+			return nil, err
+		}
+		q.Add(field.Name, value)
+	}
+
+	u := *request.URL
+	u.RawQuery = q.Encode()
+	return &u, nil
 }
 
 func buildHttpHeader(request *input.Request) (http.Header, error) {
