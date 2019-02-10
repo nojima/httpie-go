@@ -59,24 +59,25 @@ func buildHttpRequest(request *input.Request) (*http.Request, error) {
 		return nil, err
 	}
 
-	body, contentType, err := buildHttpBody(request)
+	bodyTuple, err := buildHttpBody(request)
 	if err != nil {
 		return nil, err
 	}
 
-	if header.Get("Content-Type") == "" && contentType != "" {
-		header.Set("Content-Type", contentType)
+	if header.Get("Content-Type") == "" && bodyTuple.contentType != "" {
+		header.Set("Content-Type", bodyTuple.contentType)
 	}
 	if header.Get("User-Agent") == "" {
 		header.Set("User-Agent", "httpie-go/0.0.0")
 	}
 
 	r := http.Request{
-		Method: string(request.Method),
-		URL:    request.URL,
-		Header: header,
-		Host:   header.Get("Host"),
-		Body:   body,
+		Method:        string(request.Method),
+		URL:           request.URL,
+		Header:        header,
+		Host:          header.Get("Host"),
+		Body:          bodyTuple.body,
+		ContentLength: bodyTuple.contentLength,
 	}
 	return &r, nil
 }
@@ -93,51 +94,65 @@ func buildHttpHeader(request *input.Request) (http.Header, error) {
 	return header, nil
 }
 
-func buildHttpBody(request *input.Request) (io.ReadCloser, string, error) {
+type bodyTuple struct {
+	body          io.ReadCloser
+	contentLength int64
+	contentType   string
+}
+
+func buildHttpBody(request *input.Request) (bodyTuple, error) {
 	switch request.Body.BodyType {
 	case input.EmptyBody:
-		return nil, "", nil
+		return bodyTuple{}, nil
 
 	case input.JsonBody:
 		obj := map[string]interface{}{}
 		for _, field := range request.Body.Fields {
 			value, err := resolveFieldValue(field)
 			if err != nil {
-				return nil, "", err
+				return bodyTuple{}, err
 			}
 			obj[field.Name] = value
 		}
 		for _, field := range request.Body.RawJsonFields {
 			value, err := resolveFieldValue(field)
 			if err != nil {
-				return nil, "", err
+				return bodyTuple{}, err
 			}
 			var v interface{}
 			if err := json.Unmarshal([]byte(value), &v); err != nil {
-				return nil, "", errors.Wrapf(err, "parsing JSON value of '%s'", field.Name)
+				return bodyTuple{}, errors.Wrapf(err, "parsing JSON value of '%s'", field.Name)
 			}
 			obj[field.Name] = v
 		}
 		body, err := json.Marshal(obj)
 		if err != nil {
-			return nil, "", errors.Wrap(err, "marshaling JSON of HTTP body")
+			return bodyTuple{}, errors.Wrap(err, "marshaling JSON of HTTP body")
 		}
-		return ioutil.NopCloser(bytes.NewReader(body)), "application/json", nil
+		return bodyTuple{
+			body:          ioutil.NopCloser(bytes.NewReader(body)),
+			contentLength: int64(len(body)),
+			contentType:   "application/json",
+		}, nil
 
 	case input.FormBody:
 		form := url.Values{}
 		for _, field := range request.Body.Fields {
 			value, err := resolveFieldValue(field)
 			if err != nil {
-				return nil, "", err
+				return bodyTuple{}, err
 			}
 			form.Add(field.Name, value)
 		}
 		body := form.Encode()
-		return ioutil.NopCloser(strings.NewReader(body)), "application/x-www-form-urlencoded; charset=utf-8", nil
+		return bodyTuple{
+			body:          ioutil.NopCloser(strings.NewReader(body)),
+			contentLength: int64(len(body)),
+			contentType:   "application/x-www-form-urlencoded; charset=utf-8",
+		}, nil
 
 	default:
-		return nil, "", errors.Errorf("unknown body type: %v", request.Body.BodyType)
+		return bodyTuple{}, errors.Errorf("unknown body type: %v", request.Body.BodyType)
 	}
 }
 
