@@ -1,0 +1,4 @@
+github.com/pborman/getopt v0.0.0-20190130022237-7402d34a12a8 h1:CDB7BBNTX+yBMTtBJv+llh5D22YsZML4cax4swfiSbE=
+github.com/pborman/getopt v0.0.0-20190130022237-7402d34a12a8/go.mod h1:85jBQOZwpVEaDAr341tbn15RS4fCAsIst0qp7i8ex1o=
+github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
+github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
