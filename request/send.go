@@ -49,7 +49,7 @@ func buildHttpClient() (*http.Client, error) {
 }
 
 func printResponseHeader(resp *http.Response) {
-	fmt.Printf("%s %s\n", resp.Status, resp.Proto)
+	fmt.Printf("%s %s\n", resp.Proto, resp.Status)
 	for name, values := range resp.Header {
 		for _, value := range values {
 			fmt.Printf("%s: %s\n", name, value)
