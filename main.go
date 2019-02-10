@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/nojima/httpie-go/input"
+	"github.com/nojima/httpie-go/request"
 	"github.com/pborman/getopt"
 	"github.com/pkg/errors"
 )
@@ -19,11 +20,14 @@ func main() {
 
 	// Parse positional arguments
 	args := getopt.Args()
-	request, err := input.ParseArgs(args)
+	req, err := input.ParseArgs(args)
 	if err != nil {
 		fmt.Printf("ERROR: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Request: %+v\n", request)
+	if err := request.SendRequest(req); err != nil {
+		fmt.Printf("ERROR: %v\n", err)
+		os.Exit(1)
+	}
 }

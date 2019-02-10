@@ -16,7 +16,16 @@ type Header struct {
 	Fields []Field
 }
 
+type BodyType int
+
+const (
+	EmptyBody BodyType = iota
+	JsonBody
+	FormBody
+)
+
 type Body struct {
+	BodyType      BodyType
 	Fields        []Field
 	RawJsonFields []Field
 }

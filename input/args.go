@@ -76,11 +76,13 @@ func parseItem(s string, request *Request) error {
 	itemType, name, value := splitItem(s)
 	switch itemType {
 	case dataFieldItem:
+		request.Body.BodyType = JsonBody // TODO: support FormBody
 		request.Body.Fields = append(request.Body.Fields, parseField(name, value))
 	case rawJSONFieldItem:
 		if !json.Valid([]byte(value)) {
 			return errors.Errorf("invalid JSON at '%s': %s", name, value)
 		}
+		request.Body.BodyType = JsonBody
 		request.Body.RawJsonFields = append(request.Body.RawJsonFields, parseField(name, value))
 	case httpHeaderItem:
 		if !isValidHeaderFieldName(name) {
@@ -90,6 +92,7 @@ func parseItem(s string, request *Request) error {
 	case urlParameterItem:
 		request.Parameters = append(request.Parameters, parseField(name, value))
 	case formFileFieldItem:
+		request.Body.BodyType = FormBody
 		// TODO
 		return errors.New("form file field item is not implemented")
 	default:
