@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -18,6 +19,7 @@ type PrettyPrinter struct {
 	plain         Printer
 	aurora        aurora.Aurora
 	headerPalette *HeaderPalette
+	jsonPalette   *JSONPalette
 }
 
 type HeaderPalette struct {
@@ -37,12 +39,21 @@ var defaultHeaderPalette = HeaderPalette{
 }
 
 type JSONPalette struct {
-	Name    aurora.Color
-	String  aurora.Color
-	Number  aurora.Color
-	Boolean aurora.Color
-	Null    aurora.Color
-	Symbol  aurora.Color
+	Key       aurora.Color
+	String    aurora.Color
+	Number    aurora.Color
+	Boolean   aurora.Color
+	Null      aurora.Color
+	Delimiter aurora.Color
+}
+
+var defaultJSONPalette = JSONPalette{
+	Key:       aurora.BlueFg,
+	String:    aurora.BrownFg,
+	Number:    aurora.CyanFg,
+	Boolean:   aurora.RedFg | aurora.BoldFm,
+	Null:      aurora.RedFg | aurora.BoldFm,
+	Delimiter: aurora.GrayFg,
 }
 
 func NewPrettyPrinter(writer io.Writer) Printer {
@@ -51,6 +62,7 @@ func NewPrettyPrinter(writer io.Writer) Printer {
 		plain:         NewPlainPrinter(writer),
 		aurora:        aurora.NewAurora(true),
 		headerPalette: &defaultHeaderPalette,
+		jsonPalette:   &defaultJSONPalette,
 	}
 }
 
@@ -105,14 +117,106 @@ func (p *PrettyPrinter) PrintBody(resp *http.Response) error {
 	if err := json.Unmarshal(body, &v); err != nil {
 		return errors.Wrap(err, "parsing response body as JSON")
 	}
-
-	encoder := json.NewEncoder(p.writer)
-	encoder.SetEscapeHTML(false)
-	encoder.SetIndent("", "    ")
-	if err := encoder.Encode(v); err != nil {
-		return errors.Wrap(err, "encoding JSON")
+	if err := p.printJSON(v); err != nil {
+		return err
 	}
 
 	fmt.Fprintln(p.writer)
+	return nil
+}
+
+func (p *PrettyPrinter) printJSON(v interface{}) error {
+	if v == nil {
+		return p.printNull()
+	}
+	value := reflect.ValueOf(v)
+	switch value.Kind() {
+	case reflect.Bool:
+		return p.printBool(value)
+	case reflect.Float64:
+		return p.printNumber(value)
+	case reflect.String:
+		return p.printString(value)
+	case reflect.Slice:
+		return p.printArray(value)
+	case reflect.Map:
+		return p.printMap(value)
+	default:
+		return errors.Errorf("[BUG] unknown value in JSON: %+v", value)
+	}
+}
+
+func (p *PrettyPrinter) printNull() error {
+	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("null", p.jsonPalette.Null))
+	return nil
+}
+
+func (p *PrettyPrinter) printBool(value reflect.Value) error {
+	var s string
+	if value.Bool() {
+		s = "true"
+	} else {
+		s = "false"
+	}
+	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(s, p.jsonPalette.Boolean))
+	return nil
+}
+
+func (p *PrettyPrinter) printNumber(value reflect.Value) error {
+	fmt.Fprintf(p.writer, "%g", p.aurora.Colorize(value.Float(), p.jsonPalette.Number))
+	return nil
+}
+
+func (p *PrettyPrinter) printString(value reflect.Value) error {
+	s := value.String()
+	b, _ := json.Marshal(s)
+	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(string(b), p.jsonPalette.String))
+	return nil
+}
+
+func (p *PrettyPrinter) printArray(value reflect.Value) error {
+	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("[", p.jsonPalette.Delimiter))
+
+	n := value.Len()
+	for i := 0; i < n; i++ {
+		if i != 0 {
+			fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(",", p.jsonPalette.Delimiter))
+		}
+
+		elem := value.Index(i)
+		if err := p.printJSON(elem.Interface()); err != nil {
+			return err
+		}
+	}
+
+	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("]", p.jsonPalette.Delimiter))
+	return nil
+}
+
+func (p *PrettyPrinter) printMap(value reflect.Value) error {
+	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("{", p.jsonPalette.Delimiter))
+
+	keys := value.MapKeys()
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].String() < keys[j].String()
+	})
+
+	for i, key := range keys {
+		if i != 0 {
+			fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(",", p.jsonPalette.Delimiter))
+		}
+
+		encodedKey, _ := json.Marshal(key.String())
+		fmt.Fprintf(p.writer, "%s%s",
+			aurora.Colorize(encodedKey, p.jsonPalette.Key),
+			aurora.Colorize(":", p.jsonPalette.Delimiter))
+
+		elem := value.MapIndex(key)
+		if err := p.printJSON(elem.Interface()); err != nil {
+			return err
+		}
+	}
+
+	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("}", p.jsonPalette.Delimiter))
 	return nil
 }
