@@ -48,11 +48,13 @@ func (p *PlainPrinter) PrintBody(resp *http.Response) error {
 
 type PrettyPrinter struct {
 	writer io.Writer
+	plain  Printer
 }
 
 func NewPrettyPrinter(writer io.Writer) Printer {
 	return &PrettyPrinter{
 		writer: writer,
+		plain:  NewPlainPrinter(writer),
 	}
 }
 
@@ -88,31 +90,28 @@ func isJSON(contentType string) bool {
 }
 
 func (p *PrettyPrinter) PrintBody(resp *http.Response) error {
-	if isJSON(resp.Header.Get("Content-Type")) {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return errors.Wrap(err, "reading reponse body")
-		}
-
-		var v interface{}
-		if err := json.Unmarshal(body, &v); err != nil {
-			return errors.Wrap(err, "parsing response body as JSON")
-		}
-
-		encoder := json.NewEncoder(p.writer)
-		encoder.SetEscapeHTML(false)
-		encoder.SetIndent("", "    ")
-		if err := encoder.Encode(v); err != nil {
-			return errors.Wrap(err, "encoding JSON")
-		}
-
-		fmt.Fprintln(p.writer)
-		return nil
-	} else {
-		_, err := io.Copy(p.writer, resp.Body)
-		if err != nil {
-			return errors.Wrap(err, "printing reponse body")
-		}
-		return nil
+	// Fallback to PlainPrinter when the body is not JSON
+	if !isJSON(resp.Header.Get("Content-Type")) {
+		return p.plain.PrintBody(resp)
 	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrap(err, "reading reponse body")
+	}
+
+	var v interface{}
+	if err := json.Unmarshal(body, &v); err != nil {
+		return errors.Wrap(err, "parsing response body as JSON")
+	}
+
+	encoder := json.NewEncoder(p.writer)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "    ")
+	if err := encoder.Encode(v); err != nil {
+		return errors.Wrap(err, "encoding JSON")
+	}
+
+	fmt.Fprintln(p.writer)
+	return nil
 }
