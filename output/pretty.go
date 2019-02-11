@@ -20,6 +20,7 @@ type PrettyPrinter struct {
 	aurora        aurora.Aurora
 	headerPalette *HeaderPalette
 	jsonPalette   *JSONPalette
+	indentWidth   int
 }
 
 type HeaderPalette struct {
@@ -63,6 +64,7 @@ func NewPrettyPrinter(writer io.Writer) Printer {
 		aurora:        aurora.NewAurora(true),
 		headerPalette: &defaultHeaderPalette,
 		jsonPalette:   &defaultJSONPalette,
+		indentWidth:   4,
 	}
 }
 
@@ -117,7 +119,7 @@ func (p *PrettyPrinter) PrintBody(resp *http.Response) error {
 	if err := json.Unmarshal(body, &v); err != nil {
 		return errors.Wrap(err, "parsing response body as JSON")
 	}
-	if err := p.printJSON(v); err != nil {
+	if err := p.printJSON(v, 0); err != nil {
 		return err
 	}
 
@@ -125,7 +127,7 @@ func (p *PrettyPrinter) PrintBody(resp *http.Response) error {
 	return nil
 }
 
-func (p *PrettyPrinter) printJSON(v interface{}) error {
+func (p *PrettyPrinter) printJSON(v interface{}, depth int) error {
 	if v == nil {
 		return p.printNull()
 	}
@@ -138,9 +140,9 @@ func (p *PrettyPrinter) printJSON(v interface{}) error {
 	case reflect.String:
 		return p.printString(value)
 	case reflect.Slice:
-		return p.printArray(value)
+		return p.printArray(value, depth)
 	case reflect.Map:
-		return p.printMap(value)
+		return p.printMap(value, depth)
 	default:
 		return errors.Errorf("[BUG] unknown value in JSON: %+v", value)
 	}
@@ -174,26 +176,31 @@ func (p *PrettyPrinter) printString(value reflect.Value) error {
 	return nil
 }
 
-func (p *PrettyPrinter) printArray(value reflect.Value) error {
+func (p *PrettyPrinter) printArray(value reflect.Value, depth int) error {
 	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("[", p.jsonPalette.Delimiter))
 
 	n := value.Len()
 	for i := 0; i < n; i++ {
-		if i != 0 {
-			fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(",", p.jsonPalette.Delimiter))
-		}
+		p.breakLine(depth + 1)
 
 		elem := value.Index(i)
-		if err := p.printJSON(elem.Interface()); err != nil {
+		if err := p.printJSON(elem.Interface(), depth+1); err != nil {
 			return err
+		}
+
+		if i != n-1 {
+			fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(",", p.jsonPalette.Delimiter))
 		}
 	}
 
+	if n != 0 {
+		p.breakLine(depth)
+	}
 	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("]", p.jsonPalette.Delimiter))
 	return nil
 }
 
-func (p *PrettyPrinter) printMap(value reflect.Value) error {
+func (p *PrettyPrinter) printMap(value reflect.Value, depth int) error {
 	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("{", p.jsonPalette.Delimiter))
 
 	keys := value.MapKeys()
@@ -202,21 +209,30 @@ func (p *PrettyPrinter) printMap(value reflect.Value) error {
 	})
 
 	for i, key := range keys {
-		if i != 0 {
-			fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(",", p.jsonPalette.Delimiter))
-		}
+		p.breakLine(depth + 1)
 
 		encodedKey, _ := json.Marshal(key.String())
-		fmt.Fprintf(p.writer, "%s%s",
+		fmt.Fprintf(p.writer, "%s%s ",
 			aurora.Colorize(encodedKey, p.jsonPalette.Key),
 			aurora.Colorize(":", p.jsonPalette.Delimiter))
 
 		elem := value.MapIndex(key)
-		if err := p.printJSON(elem.Interface()); err != nil {
+		if err := p.printJSON(elem.Interface(), depth+1); err != nil {
 			return err
+		}
+
+		if i != len(keys)-1 {
+			fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(",", p.jsonPalette.Delimiter))
 		}
 	}
 
+	if len(keys) != 0 {
+		p.breakLine(depth)
+	}
 	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("}", p.jsonPalette.Delimiter))
 	return nil
+}
+
+func (p *PrettyPrinter) breakLine(depth int) {
+	fmt.Fprintf(p.writer, "\n%s", strings.Repeat(" ", depth*p.indentWidth))
 }
