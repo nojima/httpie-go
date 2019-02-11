@@ -9,11 +9,11 @@ import (
 )
 
 func SendRequest(request *input.Request) (*http.Response, error) {
-	client, err := buildHttpClient()
+	client, err := buildHTTPClient()
 	if err != nil {
 		return nil, err
 	}
-	r, err := buildHttpRequest(request)
+	r, err := buildHTTPRequest(request)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func SendRequest(request *input.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func buildHttpClient() (*http.Client, error) {
+func buildHTTPClient() (*http.Client, error) {
 	client := http.Client{
 		// Do not follow redirects
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {

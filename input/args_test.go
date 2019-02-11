@@ -45,7 +45,7 @@ func TestParseArgs(t *testing.T) {
 				Method: Method("POST"),
 				URL:    mustURL("http://example.com/"),
 				Body: Body{
-					BodyType: JsonBody,
+					BodyType: JSONBody,
 					Fields: []Field{
 						{Name: "foo", Value: "bar"},
 					},
@@ -99,7 +99,7 @@ func TestParseItem(t *testing.T) {
 		title                     string
 		input                     string
 		expectedBodyFields        []Field
-		expectedBodyRawJsonFields []Field
+		expectedBodyRawJSONFields []Field
 		expectedHeaderFields      []Field
 		expectedParameters        []Field
 		shouldBeError             bool
@@ -122,7 +122,7 @@ func TestParseItem(t *testing.T) {
 		{
 			title:                     "Raw JSON field",
 			input:                     `hello:=[1, true, "world"]`,
-			expectedBodyRawJsonFields: []Field{{Name: "hello", Value: `[1, true, "world"]`}},
+			expectedBodyRawJSONFields: []Field{{Name: "hello", Value: `[1, true, "world"]`}},
 		},
 		{
 			title:         "Raw JSON field with invalid JSON",
@@ -168,8 +168,8 @@ func TestParseItem(t *testing.T) {
 			if !reflect.DeepEqual(request.Body.Fields, tt.expectedBodyFields) {
 				t.Errorf("unexpected body field: expected=%+v, actual=%+v", tt.expectedBodyFields, request.Body.Fields)
 			}
-			if !reflect.DeepEqual(request.Body.RawJsonFields, tt.expectedBodyRawJsonFields) {
-				t.Errorf("unexpected raw JSON body field: expected=%+v, actual=%+v", tt.expectedBodyRawJsonFields, tt.expectedBodyRawJsonFields)
+			if !reflect.DeepEqual(request.Body.RawJSONFields, tt.expectedBodyRawJSONFields) {
+				t.Errorf("unexpected raw JSON body field: expected=%+v, actual=%+v", tt.expectedBodyRawJSONFields, tt.expectedBodyRawJSONFields)
 			}
 			if !reflect.DeepEqual(request.Header.Fields, tt.expectedHeaderFields) {
 				t.Errorf("unexpected header field: expected=%+v, actual=%+v", tt.expectedHeaderFields, request.Header.Fields)
@@ -263,7 +263,7 @@ func TestParseUrl(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.title, func(t *testing.T) {
-			u, err := parseUrl(tt.input)
+			u, err := parseURL(tt.input)
 			if err != nil {
 				t.Fatalf("unexpected error: err=%v", err)
 			}

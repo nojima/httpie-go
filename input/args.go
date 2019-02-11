@@ -49,7 +49,7 @@ func ParseArgs(args []string) (*Request, error) {
 
 	request := &Request{}
 
-	u, err := parseUrl(argURL)
+	u, err := parseURL(argURL)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func guessMethod(request *Request) Method {
 	}
 }
 
-func parseUrl(s string) (*url.URL, error) {
+func parseURL(s string) (*url.URL, error) {
 	defaultScheme := "http"
 	defaultHost := "localhost"
 
@@ -120,14 +120,14 @@ func parseItem(s string, request *Request) error {
 	itemType, name, value := splitItem(s)
 	switch itemType {
 	case dataFieldItem:
-		request.Body.BodyType = JsonBody // TODO: support FormBody
+		request.Body.BodyType = JSONBody // TODO: support FormBody
 		request.Body.Fields = append(request.Body.Fields, parseField(name, value))
 	case rawJSONFieldItem:
 		if !json.Valid([]byte(value)) {
 			return errors.Errorf("invalid JSON at '%s': %s", name, value)
 		}
-		request.Body.BodyType = JsonBody
-		request.Body.RawJsonFields = append(request.Body.RawJsonFields, parseField(name, value))
+		request.Body.BodyType = JSONBody
+		request.Body.RawJSONFields = append(request.Body.RawJSONFields, parseField(name, value))
 	case httpHeaderItem:
 		if !isValidHeaderFieldName(name) {
 			return errors.Errorf("invalid header field name: %s", name)
