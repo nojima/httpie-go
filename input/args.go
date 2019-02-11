@@ -78,7 +78,8 @@ func parseMethod(s string) (Method, error) {
 	if !reMethod.MatchString(s) {
 		return emptyMethod, errors.Errorf("METHOD must consist of alphabets: %s", s)
 	}
-	method := Method(s)
+
+	method := Method(strings.ToUpper(s))
 	return method, nil
 }
 
