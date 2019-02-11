@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/mattn/go-isatty"
 	"github.com/nojima/httpie-go/input"
 	"github.com/nojima/httpie-go/output"
 	"github.com/nojima/httpie-go/request"
@@ -29,7 +30,10 @@ func innerMain() error {
 	defer resp.Body.Close()
 
 	// Print response
-	printer := output.NewPrettyPrinter(os.Stdout)
+	printer := output.NewPrettyPrinter(output.PrettyPrinterConfig{
+		Writer:      os.Stdout,
+		EnableColor: isatty.IsTerminal(os.Stdout.Fd()),
+	})
 	if err := printer.PrintHeader(resp); err != nil {
 		return err
 	}
