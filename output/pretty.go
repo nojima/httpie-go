@@ -126,7 +126,7 @@ func (p *PrettyPrinter) PrintBody(resp *http.Response) error {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return errors.Wrap(err, "reading reponse body")
+		return errors.Wrap(err, "reading response body")
 	}
 
 	var v interface{}
