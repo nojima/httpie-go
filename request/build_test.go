@@ -16,7 +16,7 @@ import (
 func parseURL(t *testing.T, rawurl string) *url.URL {
 	u, err := url.Parse(rawurl)
 	if err != nil {
-		t.Errorf("failed to parse URL: %s", err)
+		t.Fatalf("failed to parse URL: %s", err)
 	}
 	return u
 }
@@ -46,7 +46,7 @@ func TestBuildHttpRequest(t *testing.T) {
 	// Exercise
 	actual, err := buildHttpRequest(request)
 	if err != nil {
-		t.Errorf("unexpected error: err=%v", err)
+		t.Fatalf("unexpected error: err=%v", err)
 	}
 
 	// Verify
@@ -143,11 +143,11 @@ func TestBuildURL(t *testing.T) {
 func makeTempFile(t *testing.T, content string) string {
 	tmpfile, err := ioutil.TempFile("", "httpie-go-test-")
 	if err != nil {
-		t.Errorf("failed to create temporary file: %v", err)
+		t.Fatalf("failed to create temporary file: %v", err)
 	}
 	if _, err := tmpfile.Write([]byte(content)); err != nil {
 		os.Remove(tmpfile.Name())
-		t.Errorf("failed to write to temporary file: %v", err)
+		t.Fatalf("failed to write to temporary file: %v", err)
 	}
 	return tmpfile.Name()
 }
@@ -169,7 +169,7 @@ func TestBuildHttpHeader(t *testing.T) {
 	// Exercise
 	httpHeader, err := buildHttpHeader(request)
 	if err != nil {
-		t.Errorf("unexpected error: err=%+v", err)
+		t.Fatalf("unexpected error: err=%+v", err)
 	}
 
 	// Verify
@@ -186,10 +186,10 @@ func TestBuildHttpHeader(t *testing.T) {
 func isEquivalentJson(t *testing.T, json1, json2 string) bool {
 	var obj1, obj2 interface{}
 	if err := json.Unmarshal([]byte(json1), &obj1); err != nil {
-		t.Errorf("failed to unmarshal json1: %v", err)
+		t.Fatalf("failed to unmarshal json1: %v", err)
 	}
 	if err := json.Unmarshal([]byte(json2), &obj2); err != nil {
-		t.Errorf("failed to unmarshal json2: %v", err)
+		t.Fatalf("failed to unmarshal json2: %v", err)
 	}
 	return reflect.DeepEqual(obj1, obj2)
 }
@@ -197,7 +197,7 @@ func isEquivalentJson(t *testing.T, json1, json2 string) bool {
 func readAll(t *testing.T, reader io.Reader) string {
 	b, err := ioutil.ReadAll(reader)
 	if err != nil {
-		t.Errorf("failed to read all: %s", err)
+		t.Fatalf("failed to read all: %s", err)
 	}
 	return string(b)
 }
@@ -214,7 +214,7 @@ func TestBuildHttpBody_EmptyBody(t *testing.T) {
 	// Exercise
 	actual, err := buildHttpBody(request)
 	if err != nil {
-		t.Errorf("unexpected error: err=%+v", err)
+		t.Fatalf("unexpected error: err=%+v", err)
 	}
 
 	// Verify
@@ -244,7 +244,7 @@ func TestBuildHttpBody_JsonBody(t *testing.T) {
 	// Exercise
 	bodyTuple, err := buildHttpBody(request)
 	if err != nil {
-		t.Errorf("unexpected error: err=%+v", err)
+		t.Fatalf("unexpected error: err=%+v", err)
 	}
 
 	// Verify
@@ -283,7 +283,7 @@ func TestBuildHttpBody_FormBody(t *testing.T) {
 	// Exercise
 	bodyTuple, err := buildHttpBody(request)
 	if err != nil {
-		t.Errorf("unexpected error: err=%+v", err)
+		t.Fatalf("unexpected error: err=%+v", err)
 	}
 
 	// Verify
