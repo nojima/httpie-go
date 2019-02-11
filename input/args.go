@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	reMethod          = regexp.MustCompile(`^[a-zA-Z0-9]+$`)
+	reMethod          = regexp.MustCompile(`^[a-zA-Z]+$`)
 	reHeaderFieldName = regexp.MustCompile("^[-!#$%&'*+.^_|~a-zA-Z0-9]+$")
 	reScheme          = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+-.]*://`)
 	emptyMethod       = Method("")
@@ -28,30 +28,47 @@ const (
 )
 
 func ParseArgs(args []string) (*Request, error) {
+	var argMethod string
+	var argURL string
+	var argItems []string
+	switch len(args) {
+	case 0:
+		return nil, errors.New("URL is required")
+	case 1:
+		argURL = args[0]
+	default:
+		if reMethod.MatchString(args[0]) {
+			argMethod = args[0]
+			argURL = args[1]
+			argItems = args[2:]
+		} else {
+			argURL = args[0]
+			argItems = args[1:]
+		}
+	}
+
 	request := &Request{}
 
-	if len(args) < 1 {
-		return nil, errors.New("METHOD is missing")
-	}
-	method, err := parseMethod(args[0])
-	if err != nil {
-		return nil, err
-	}
-	request.Method = method
-
-	if len(args) < 2 {
-		return nil, errors.New("URL is missing")
-	}
-	u, err := parseUrl(args[1])
+	u, err := parseUrl(argURL)
 	if err != nil {
 		return nil, err
 	}
 	request.URL = u
 
-	for _, arg := range args[2:] {
+	for _, arg := range argItems {
 		if err := parseItem(arg, request); err != nil {
 			return nil, err
 		}
+	}
+
+	if argMethod != "" {
+		method, err := parseMethod(argMethod)
+		if err != nil {
+			return nil, err
+		}
+		request.Method = method
+	} else {
+		request.Method = guessMethod(request)
 	}
 
 	return request, nil
@@ -59,10 +76,18 @@ func ParseArgs(args []string) (*Request, error) {
 
 func parseMethod(s string) (Method, error) {
 	if !reMethod.MatchString(s) {
-		return emptyMethod, errors.Errorf("METHOD must consist of alphabets and numbers: %s", s)
+		return emptyMethod, errors.Errorf("METHOD must consist of alphabets: %s", s)
 	}
 	method := Method(s)
 	return method, nil
+}
+
+func guessMethod(request *Request) Method {
+	if request.Body.BodyType == EmptyBody {
+		return Method("GET")
+	} else {
+		return Method("POST")
+	}
 }
 
 func parseUrl(s string) (*url.URL, error) {
