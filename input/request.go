@@ -20,14 +20,14 @@ type BodyType int
 
 const (
 	EmptyBody BodyType = iota
-	JsonBody
+	JSONBody
 	FormBody
 )
 
 type Body struct {
 	BodyType      BodyType
 	Fields        []Field
-	RawJsonFields []Field
+	RawJSONFields []Field
 }
 
 type Field struct {

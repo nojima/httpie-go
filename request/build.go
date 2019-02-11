@@ -13,18 +13,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-func buildHttpRequest(request *input.Request) (*http.Request, error) {
+func buildHTTPRequest(request *input.Request) (*http.Request, error) {
 	u, err := buildURL(request)
 	if err != nil {
 		return nil, err
 	}
 
-	header, err := buildHttpHeader(request)
+	header, err := buildHTTPHeader(request)
 	if err != nil {
 		return nil, err
 	}
 
-	bodyTuple, err := buildHttpBody(request)
+	bodyTuple, err := buildHTTPBody(request)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func buildURL(request *input.Request) (*url.URL, error) {
 	return &u, nil
 }
 
-func buildHttpHeader(request *input.Request) (http.Header, error) {
+func buildHTTPHeader(request *input.Request) (http.Header, error) {
 	header := make(http.Header)
 	for _, field := range request.Header.Fields {
 		value, err := resolveFieldValue(field)
@@ -83,12 +83,12 @@ type bodyTuple struct {
 	contentType   string
 }
 
-func buildHttpBody(request *input.Request) (bodyTuple, error) {
+func buildHTTPBody(request *input.Request) (bodyTuple, error) {
 	switch request.Body.BodyType {
 	case input.EmptyBody:
 		return bodyTuple{}, nil
-	case input.JsonBody:
-		return buildJsonBody(request)
+	case input.JSONBody:
+		return buildJSONBody(request)
 	case input.FormBody:
 		return buildFormBody(request)
 	default:
@@ -96,7 +96,7 @@ func buildHttpBody(request *input.Request) (bodyTuple, error) {
 	}
 }
 
-func buildJsonBody(request *input.Request) (bodyTuple, error) {
+func buildJSONBody(request *input.Request) (bodyTuple, error) {
 	obj := map[string]interface{}{}
 	for _, field := range request.Body.Fields {
 		value, err := resolveFieldValue(field)
@@ -105,7 +105,7 @@ func buildJsonBody(request *input.Request) (bodyTuple, error) {
 		}
 		obj[field.Name] = value
 	}
-	for _, field := range request.Body.RawJsonFields {
+	for _, field := range request.Body.RawJSONFields {
 		value, err := resolveFieldValue(field)
 		if err != nil {
 			return bodyTuple{}, err

@@ -21,7 +21,7 @@ func parseURL(t *testing.T, rawurl string) *url.URL {
 	return u
 }
 
-func TestBuildHttpRequest(t *testing.T) {
+func TestBuildHTTPRequest(t *testing.T) {
 	// Setup
 	request := &input.Request{
 		Method: input.Method("POST"),
@@ -36,7 +36,7 @@ func TestBuildHttpRequest(t *testing.T) {
 			},
 		},
 		Body: input.Body{
-			BodyType: input.JsonBody,
+			BodyType: input.JSONBody,
 			Fields: []input.Field{
 				{Name: "hoge", Value: "fuga"},
 			},
@@ -44,7 +44,7 @@ func TestBuildHttpRequest(t *testing.T) {
 	}
 
 	// Exercise
-	actual, err := buildHttpRequest(request)
+	actual, err := buildHTTPRequest(request)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%v", err)
 	}
@@ -72,7 +72,7 @@ func TestBuildHttpRequest(t *testing.T) {
 	}
 	expectedBody := `{"hoge": "fuga"}`
 	actualBody := readAll(t, actual.Body)
-	if !isEquivalentJson(t, expectedBody, actualBody) {
+	if !isEquivalentJSON(t, expectedBody, actualBody) {
 		t.Errorf("unexpected body: expected=%v, actual=%v", expectedBody, actualBody)
 	}
 }
@@ -152,7 +152,7 @@ func makeTempFile(t *testing.T, content string) string {
 	return tmpfile.Name()
 }
 
-func TestBuildHttpHeader(t *testing.T) {
+func TestBuildHTTPHeader(t *testing.T) {
 	// Setup
 	fileName := makeTempFile(t, "test test")
 	defer os.Remove(fileName)
@@ -167,7 +167,7 @@ func TestBuildHttpHeader(t *testing.T) {
 	request := &input.Request{Header: header}
 
 	// Exercise
-	httpHeader, err := buildHttpHeader(request)
+	httpHeader, err := buildHTTPHeader(request)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%+v", err)
 	}
@@ -183,7 +183,7 @@ func TestBuildHttpHeader(t *testing.T) {
 	}
 }
 
-func isEquivalentJson(t *testing.T, json1, json2 string) bool {
+func isEquivalentJSON(t *testing.T, json1, json2 string) bool {
 	var obj1, obj2 interface{}
 	if err := json.Unmarshal([]byte(json1), &obj1); err != nil {
 		t.Fatalf("failed to unmarshal json1: %v", err)
@@ -202,7 +202,7 @@ func readAll(t *testing.T, reader io.Reader) string {
 	return string(b)
 }
 
-func TestBuildHttpBody_EmptyBody(t *testing.T) {
+func TestBuildHTTPBody_EmptyBody(t *testing.T) {
 	// Setup
 	fileName := makeTempFile(t, "test test")
 	defer os.Remove(fileName)
@@ -212,7 +212,7 @@ func TestBuildHttpBody_EmptyBody(t *testing.T) {
 	request := &input.Request{Body: body}
 
 	// Exercise
-	actual, err := buildHttpBody(request)
+	actual, err := buildHTTPBody(request)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%+v", err)
 	}
@@ -224,17 +224,17 @@ func TestBuildHttpBody_EmptyBody(t *testing.T) {
 	}
 }
 
-func TestBuildHttpBody_JsonBody(t *testing.T) {
+func TestBuildHTTPBody_JSONBody(t *testing.T) {
 	// Setup
 	fileName := makeTempFile(t, "test test")
 	defer os.Remove(fileName)
 	body := input.Body{
-		BodyType: input.JsonBody,
+		BodyType: input.JSONBody,
 		Fields: []input.Field{
 			{Name: "foo", Value: "bar"},
 			{Name: "from_file", Value: fileName, IsFile: true},
 		},
-		RawJsonFields: []input.Field{
+		RawJSONFields: []input.Field{
 			{Name: "boolean", Value: "true"},
 			{Name: "array", Value: `[1, null, "hello"]`},
 		},
@@ -242,7 +242,7 @@ func TestBuildHttpBody_JsonBody(t *testing.T) {
 	request := &input.Request{Body: body}
 
 	// Exercise
-	bodyTuple, err := buildHttpBody(request)
+	bodyTuple, err := buildHTTPBody(request)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%+v", err)
 	}
@@ -255,7 +255,7 @@ func TestBuildHttpBody_JsonBody(t *testing.T) {
 		"array": [1, null, "hello"]
 	}`
 	actualBody := readAll(t, bodyTuple.body)
-	if !isEquivalentJson(t, expectedBody, actualBody) {
+	if !isEquivalentJSON(t, expectedBody, actualBody) {
 		t.Errorf("unexpected body: expected=%s, actual=%s", expectedBody, actualBody)
 	}
 	expectedContentType := "application/json"
@@ -267,7 +267,7 @@ func TestBuildHttpBody_JsonBody(t *testing.T) {
 	}
 }
 
-func TestBuildHttpBody_FormBody(t *testing.T) {
+func TestBuildHTTPBody_FormBody(t *testing.T) {
 	// Setup
 	fileName := makeTempFile(t, "love & peace")
 	defer os.Remove(fileName)
@@ -281,7 +281,7 @@ func TestBuildHttpBody_FormBody(t *testing.T) {
 	request := &input.Request{Body: body}
 
 	// Exercise
-	bodyTuple, err := buildHttpBody(request)
+	bodyTuple, err := buildHTTPBody(request)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%+v", err)
 	}
