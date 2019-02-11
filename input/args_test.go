@@ -31,20 +31,41 @@ func TestParseArgs(t *testing.T) {
 			shouldBeError: false,
 		},
 		{
-			title:           "Invalid method",
-			args:            []string{"GET/POST", "http://example.com/hello"},
-			expectedRequest: nil,
-			shouldBeError:   true,
+			title: "Method is omitted (only host)",
+			args:  []string{"localhost"},
+			expectedRequest: &Request{
+				Method: Method("GET"),
+				URL:    mustURL("http://localhost/"),
+			},
 		},
 		{
-			title:           "Method missing",
-			args:            []string{},
-			expectedRequest: nil,
-			shouldBeError:   true,
+			title: "Method is omitted (JSON body)",
+			args:  []string{"example.com", "foo=bar"},
+			expectedRequest: &Request{
+				Method: Method("POST"),
+				URL:    mustURL("http://example.com/"),
+				Body: Body{
+					BodyType: JsonBody,
+					Fields: []Field{
+						{Name: "foo", Value: "bar"},
+					},
+				},
+			},
+		},
+		{
+			title: "Method is omitted (query parameter)",
+			args:  []string{"example.com", "foo==bar"},
+			expectedRequest: &Request{
+				Method: Method("GET"),
+				URL:    mustURL("http://example.com/"),
+				Parameters: []Field{
+					{Name: "foo", Value: "bar"},
+				},
+			},
 		},
 		{
 			title:           "URL missing",
-			args:            []string{"POST"},
+			args:            []string{},
 			expectedRequest: nil,
 			shouldBeError:   true,
 		},
