@@ -82,7 +82,7 @@ func TestParseArgs(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			request, err := ParseArgs(tt.args)
 			if (err != nil) != tt.shouldBeError {
-				t.Errorf("unexpected error: shouldBeError=%v, err=%v", tt.shouldBeError, err)
+				t.Fatalf("unexpected error: shouldBeError=%v, err=%v", tt.shouldBeError, err)
 			}
 			if err != nil {
 				return
@@ -160,7 +160,7 @@ func TestParseItem(t *testing.T) {
 			request := Request{}
 			err := parseItem(tt.input, &request)
 			if (err != nil) != tt.shouldBeError {
-				t.Errorf("unexpected error: shouldBeError=%v, err=%v", tt.shouldBeError, err)
+				t.Fatalf("unexpected error: shouldBeError=%v, err=%v", tt.shouldBeError, err)
 			}
 			if err != nil {
 				return
@@ -265,7 +265,7 @@ func TestParseUrl(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			u, err := parseUrl(tt.input)
 			if err != nil {
-				t.Errorf("unexpected error: err=%v", err)
+				t.Fatalf("unexpected error: err=%v", err)
 			}
 			if !reflect.DeepEqual(*u, tt.expected) {
 				t.Errorf("unexpected result: expected=%+v, actual=%+v", tt.expected, *u)
