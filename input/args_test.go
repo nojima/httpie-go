@@ -69,6 +69,14 @@ func TestParseArgs(t *testing.T) {
 			expectedRequest: nil,
 			shouldBeError:   true,
 		},
+		{
+			title: "Lower case method",
+			args:  []string{"get", "localhost"},
+			expectedRequest: &Request{
+				Method: Method("GET"),
+				URL:    mustURL("http://localhost/"),
+			},
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.title, func(t *testing.T) {
