@@ -24,19 +24,21 @@ type PrettyPrinter struct {
 }
 
 type HeaderPalette struct {
-	Proto          aurora.Color
-	Status         aurora.Color
-	FieldName      aurora.Color
-	FieldValue     aurora.Color
-	FieldSeparator aurora.Color
+	Proto               aurora.Color
+	SuccessfulStatus    aurora.Color
+	NonSuccessfulStatus aurora.Color
+	FieldName           aurora.Color
+	FieldValue          aurora.Color
+	FieldSeparator      aurora.Color
 }
 
 var defaultHeaderPalette = HeaderPalette{
-	Proto:          aurora.BlueFg,
-	Status:         aurora.BrownFg | aurora.BoldFm,
-	FieldName:      aurora.GrayFg,
-	FieldValue:     aurora.CyanFg,
-	FieldSeparator: aurora.GrayFg,
+	Proto:               aurora.BlueFg,
+	SuccessfulStatus:    aurora.GreenFg | aurora.BoldFm,
+	NonSuccessfulStatus: aurora.BrownFg | aurora.BoldFm,
+	FieldName:           aurora.GrayFg,
+	FieldValue:          aurora.CyanFg,
+	FieldSeparator:      aurora.GrayFg,
 }
 
 type JSONPalette struct {
@@ -69,9 +71,16 @@ func NewPrettyPrinter(writer io.Writer) Printer {
 }
 
 func (p *PrettyPrinter) PrintHeader(resp *http.Response) error {
+	var statusColor aurora.Color
+	if 200 <= resp.StatusCode && resp.StatusCode < 300 {
+		statusColor = p.headerPalette.SuccessfulStatus
+	} else {
+		statusColor = p.headerPalette.NonSuccessfulStatus
+	}
+
 	fmt.Fprintf(p.writer, "%s %s\n",
 		p.aurora.Colorize(resp.Proto, p.headerPalette.Proto),
-		p.aurora.Colorize(resp.Status, p.headerPalette.Status))
+		p.aurora.Colorize(resp.Status, statusColor))
 
 	var names []string
 	for name := range resp.Header {
