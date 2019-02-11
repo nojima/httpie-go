@@ -23,6 +23,11 @@ type PrettyPrinter struct {
 	indentWidth   int
 }
 
+type PrettyPrinterConfig struct {
+	Writer      io.Writer
+	EnableColor bool
+}
+
 type HeaderPalette struct {
 	Proto               aurora.Color
 	SuccessfulStatus    aurora.Color
@@ -59,11 +64,11 @@ var defaultJSONPalette = JSONPalette{
 	Delimiter: aurora.GrayFg,
 }
 
-func NewPrettyPrinter(writer io.Writer) Printer {
+func NewPrettyPrinter(config PrettyPrinterConfig) Printer {
 	return &PrettyPrinter{
-		writer:        writer,
-		plain:         NewPlainPrinter(writer),
-		aurora:        aurora.NewAurora(true),
+		writer:        config.Writer,
+		plain:         NewPlainPrinter(config.Writer),
+		aurora:        aurora.NewAurora(config.EnableColor),
 		headerPalette: &defaultHeaderPalette,
 		jsonPalette:   &defaultJSONPalette,
 		indentWidth:   4,
@@ -222,8 +227,8 @@ func (p *PrettyPrinter) printMap(value reflect.Value, depth int) error {
 
 		encodedKey, _ := json.Marshal(key.String())
 		fmt.Fprintf(p.writer, "%s%s ",
-			aurora.Colorize(encodedKey, p.jsonPalette.Key),
-			aurora.Colorize(":", p.jsonPalette.Delimiter))
+			p.aurora.Colorize(encodedKey, p.jsonPalette.Key),
+			p.aurora.Colorize(":", p.jsonPalette.Delimiter))
 
 		elem := value.MapIndex(key)
 		if err := p.printJSON(elem.Interface(), depth+1); err != nil {
