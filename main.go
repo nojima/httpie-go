@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 
@@ -30,13 +31,16 @@ func innerMain() error {
 	defer resp.Body.Close()
 
 	// Print response
+	writer := bufio.NewWriter(os.Stdout)
+	defer writer.Flush()
 	printer := output.NewPrettyPrinter(output.PrettyPrinterConfig{
-		Writer:      os.Stdout,
+		Writer:      writer,
 		EnableColor: isatty.IsTerminal(os.Stdout.Fd()),
 	})
 	if err := printer.PrintHeader(resp); err != nil {
 		return err
 	}
+	writer.Flush()
 	if err := printer.PrintBody(resp); err != nil {
 		return err
 	}
