@@ -1,10 +1,12 @@
 package output
 
 import (
+	"io"
 	"net/http"
 )
 
 type Printer interface {
-	PrintHeader(response *http.Response) error
-	PrintBody(response *http.Response) error
+	PrintStatusLine(response *http.Response) error
+	PrintHeader(header http.Header) error
+	PrintBody(body io.Reader, contentType string) error
 }

@@ -75,7 +75,7 @@ func NewPrettyPrinter(config PrettyPrinterConfig) Printer {
 	}
 }
 
-func (p *PrettyPrinter) PrintHeader(resp *http.Response) error {
+func (p *PrettyPrinter) PrintStatusLine(resp *http.Response) error {
 	var statusColor aurora.Color
 	if 200 <= resp.StatusCode && resp.StatusCode < 300 {
 		statusColor = p.headerPalette.SuccessfulStatus
@@ -86,15 +86,18 @@ func (p *PrettyPrinter) PrintHeader(resp *http.Response) error {
 	fmt.Fprintf(p.writer, "%s %s\n",
 		p.aurora.Colorize(resp.Proto, p.headerPalette.Proto),
 		p.aurora.Colorize(resp.Status, statusColor))
+	return nil
+}
 
+func (p *PrettyPrinter) PrintHeader(header http.Header) error {
 	var names []string
-	for name := range resp.Header {
+	for name := range header {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 
 	for _, name := range names {
-		values := resp.Header[name]
+		values := header[name]
 		for _, value := range values {
 			fmt.Fprintf(p.writer, "%s%s %s\n",
 				p.aurora.Colorize(name, p.headerPalette.FieldName),
@@ -118,19 +121,19 @@ func isJSON(contentType string) bool {
 	return contentType == "application/json"
 }
 
-func (p *PrettyPrinter) PrintBody(resp *http.Response) error {
+func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
 	// Fallback to PlainPrinter when the body is not JSON
-	if !isJSON(resp.Header.Get("Content-Type")) {
-		return p.plain.PrintBody(resp)
+	if !isJSON(contentType) {
+		return p.plain.PrintBody(body, contentType)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	content, err := ioutil.ReadAll(body)
 	if err != nil {
 		return errors.Wrap(err, "reading response body")
 	}
 
 	var v interface{}
-	if err := json.Unmarshal(body, &v); err != nil {
+	if err := json.Unmarshal(content, &v); err != nil {
 		return errors.Wrap(err, "parsing response body as JSON")
 	}
 	if err := p.printJSON(v, 0); err != nil {
