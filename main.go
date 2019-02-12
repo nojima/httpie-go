@@ -37,11 +37,14 @@ func innerMain() error {
 		Writer:      writer,
 		EnableColor: isatty.IsTerminal(os.Stdout.Fd()),
 	})
-	if err := printer.PrintHeader(resp); err != nil {
+	if err := printer.PrintStatusLine(resp); err != nil {
+		return err
+	}
+	if err := printer.PrintHeader(resp.Header); err != nil {
 		return err
 	}
 	writer.Flush()
-	if err := printer.PrintBody(resp); err != nil {
+	if err := printer.PrintBody(resp.Body, resp.Header.Get("Content-Type")); err != nil {
 		return err
 	}
 
