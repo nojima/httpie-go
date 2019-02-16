@@ -1,8 +1,7 @@
-package main
+package httpie
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 
 	"github.com/mattn/go-isatty"
@@ -12,7 +11,7 @@ import (
 	"github.com/pborman/getopt"
 )
 
-func innerMain() error {
+func Main() error {
 	// Parse flags
 	getopt.Parse()
 
@@ -49,11 +48,4 @@ func innerMain() error {
 	}
 
 	return nil
-}
-
-func main() {
-	if err := innerMain(); err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
-	}
 }
