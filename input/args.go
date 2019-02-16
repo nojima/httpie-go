@@ -27,13 +27,24 @@ const (
 	formFileFieldItem
 )
 
+type UsageError string
+
+func (e *UsageError) Error() string {
+	return string(*e)
+}
+
+func newUsageError(message string) error {
+	u := UsageError(message)
+	return errors.WithStack(&u)
+}
+
 func ParseArgs(args []string, options *Options) (*Request, error) {
 	var argMethod string
 	var argURL string
 	var argItems []string
 	switch len(args) {
 	case 0:
-		return nil, errors.New("URL is required")
+		return nil, newUsageError("URL is required")
 	case 1:
 		argURL = args[0]
 	default:
@@ -116,7 +127,7 @@ func parseURL(s string) (*url.URL, error) {
 
 	u, err := url.Parse(s)
 	if err != nil {
-		return nil, errors.Errorf("Invalid URL: %s", s)
+		return nil, newUsageError("Invalid URL: " + s)
 	}
 	u.Host = strings.TrimSuffix(u.Host, ":")
 	if u.Path == "" {

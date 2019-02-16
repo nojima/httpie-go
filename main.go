@@ -9,6 +9,7 @@ import (
 	"github.com/nojima/httpie-go/output"
 	"github.com/nojima/httpie-go/request"
 	"github.com/pborman/getopt"
+	"github.com/pkg/errors"
 )
 
 func Main() error {
@@ -21,6 +22,10 @@ func Main() error {
 
 	// Parse positional arguments
 	req, err := input.ParseArgs(flagSet.Args(), options)
+	if _, ok := errors.Cause(err).(*input.UsageError); ok {
+		flagSet.PrintUsage(os.Stderr)
+		return err
+	}
 	if err != nil {
 		return err
 	}
