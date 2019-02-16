@@ -18,6 +18,7 @@ func TestParseArgs(t *testing.T) {
 	testCases := []struct {
 		title           string
 		args            []string
+		options         *Options
 		expectedRequest *Request
 		shouldBeError   bool
 	}{
@@ -80,13 +81,22 @@ func TestParseArgs(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.title, func(t *testing.T) {
-			request, err := ParseArgs(tt.args)
+			// Setup
+			options := &Options{}
+			if tt.options != nil {
+				options = tt.options
+			}
+
+			// Exercise
+			request, err := ParseArgs(tt.args, options)
 			if (err != nil) != tt.shouldBeError {
 				t.Fatalf("unexpected error: shouldBeError=%v, err=%v", tt.shouldBeError, err)
 			}
 			if err != nil {
 				return
 			}
+
+			// Verify
 			if !reflect.DeepEqual(request, tt.expectedRequest) {
 				t.Errorf("unexpected request: expected=%+v, actual=%+v", tt.expectedRequest, request)
 			}
@@ -98,31 +108,52 @@ func TestParseItem(t *testing.T) {
 	testCases := []struct {
 		title                     string
 		input                     string
+		currentBodyType           BodyType
+		preferredBodyType         BodyType
 		expectedBodyFields        []Field
 		expectedBodyRawJSONFields []Field
 		expectedHeaderFields      []Field
 		expectedParameters        []Field
+		expectedBodyType          BodyType
 		shouldBeError             bool
 	}{
 		{
 			title:              "Data field",
 			input:              "hello=world",
 			expectedBodyFields: []Field{{Name: "hello", Value: "world"}},
+			expectedBodyType:   JSONBody,
+		},
+		{
+			title:              "Data field in JSON body type",
+			input:              "hello=world",
+			currentBodyType:    JSONBody,
+			expectedBodyFields: []Field{{Name: "hello", Value: "world"}},
+			expectedBodyType:   JSONBody,
+		},
+		{
+			title:              "Data field (form)",
+			input:              "hello=world",
+			preferredBodyType:  FormBody,
+			expectedBodyFields: []Field{{Name: "hello", Value: "world"}},
+			expectedBodyType:   FormBody,
 		},
 		{
 			title:              "Data field with empty value",
 			input:              "hello=",
 			expectedBodyFields: []Field{{Name: "hello", Value: ""}},
+			expectedBodyType:   JSONBody,
 		},
 		{
 			title:              "Data field from file",
 			input:              "hello=@world.txt",
 			expectedBodyFields: []Field{{Name: "hello", Value: "world.txt", IsFile: true}},
+			expectedBodyType:   JSONBody,
 		},
 		{
 			title:                     "Raw JSON field",
 			input:                     `hello:=[1, true, "world"]`,
 			expectedBodyRawJSONFields: []Field{{Name: "hello", Value: `[1, true, "world"]`}},
+			expectedBodyType:          JSONBody,
 		},
 		{
 			title:         "Raw JSON field with invalid JSON",
@@ -130,14 +161,22 @@ func TestParseItem(t *testing.T) {
 			shouldBeError: true,
 		},
 		{
+			title:           "Raw JSON field in form body type",
+			input:           `hello:=[1, true, "world"]`,
+			currentBodyType: FormBody,
+			shouldBeError:   true,
+		},
+		{
 			title:                "Header field",
 			input:                "X-Example:Sample Value",
 			expectedHeaderFields: []Field{{Name: "X-Example", Value: "Sample Value"}},
+			expectedBodyType:     EmptyBody,
 		},
 		{
 			title:                "Header field with empty value",
 			input:                "X-Example:",
 			expectedHeaderFields: []Field{{Name: "X-Example", Value: ""}},
+			expectedBodyType:     EmptyBody,
 		},
 		{
 			title:         "Invalid header field name",
@@ -148,23 +187,35 @@ func TestParseItem(t *testing.T) {
 			title:              "URL parameter",
 			input:              "hello==world",
 			expectedParameters: []Field{{Name: "hello", Value: "world"}},
+			expectedBodyType:   EmptyBody,
 		},
 		{
 			title:              "URL parameter with empty value",
 			input:              "hello==",
 			expectedParameters: []Field{{Name: "hello", Value: ""}},
+			expectedBodyType:   EmptyBody,
 		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.title, func(t *testing.T) {
+			// Setup
 			request := Request{}
-			err := parseItem(tt.input, &request)
+			request.Body.BodyType = tt.currentBodyType
+			preferredBodyType := JSONBody
+			if tt.preferredBodyType != EmptyBody {
+				preferredBodyType = tt.preferredBodyType
+			}
+
+			// Exercise
+			err := parseItem(tt.input, &request, preferredBodyType)
 			if (err != nil) != tt.shouldBeError {
 				t.Fatalf("unexpected error: shouldBeError=%v, err=%v", tt.shouldBeError, err)
 			}
 			if err != nil {
 				return
 			}
+
+			// Verify
 			if !reflect.DeepEqual(request.Body.Fields, tt.expectedBodyFields) {
 				t.Errorf("unexpected body field: expected=%+v, actual=%+v", tt.expectedBodyFields, request.Body.Fields)
 			}
@@ -176,6 +227,9 @@ func TestParseItem(t *testing.T) {
 			}
 			if !reflect.DeepEqual(request.Parameters, tt.expectedParameters) {
 				t.Errorf("unexpected parameters: expected=%+v, actual=%+v", tt.expectedParameters, request.Parameters)
+			}
+			if request.Body.BodyType != tt.expectedBodyType {
+				t.Errorf("unexpected body type: expected=%v, actual=%v", tt.expectedBodyType, request.Body.BodyType)
 			}
 		})
 	}
@@ -263,10 +317,13 @@ func TestParseUrl(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.title, func(t *testing.T) {
+			// Exercise
 			u, err := parseURL(tt.input)
 			if err != nil {
 				t.Fatalf("unexpected error: err=%v", err)
 			}
+
+			// Verify
 			if !reflect.DeepEqual(*u, tt.expected) {
 				t.Errorf("unexpected result: expected=%+v, actual=%+v", tt.expected, *u)
 			}
