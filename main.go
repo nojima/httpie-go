@@ -15,6 +15,7 @@ func Main() error {
 	// Parse flags
 	options := &input.Options{}
 	flagSet := getopt.New()
+	flagSet.SetParameters("[METHOD] URL [REQUEST_ITEM [REQUEST_ITEM ...]]")
 	flagSet.BoolVarLong(&options.Form, "form", 'f', "serialize body in application/x-www-form-urlencoded")
 	flagSet.Parse(os.Args)
 
