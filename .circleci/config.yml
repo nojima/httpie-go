@@ -11,7 +11,8 @@ jobs:
             diff -u <(echo -n) <(gofmt -d ./)
       - run:
           name: Build
-          command: cd cmd/hg && go build
+          working_directory: cmd/hg
+          command: go build
       - run:
           name: Test
           command: go test ./...
