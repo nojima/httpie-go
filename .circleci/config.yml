@@ -1,0 +1,17 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.11.5
+    steps:
+      - checkout
+      - run:
+          name: Check code format
+          command: |
+            diff -u <(echo -n) <(gofmt -d ./)
+      - run:
+          name: Build
+          command: cd cmd/hg && go build
+      - run:
+          name: Test
+          command: go test ./...
