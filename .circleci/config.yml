@@ -16,3 +16,8 @@ jobs:
       - run:
           name: Test
           command: go test ./...
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
