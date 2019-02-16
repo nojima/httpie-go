@@ -13,11 +13,13 @@ import (
 
 func Main() error {
 	// Parse flags
-	getopt.Parse()
+	options := &input.Options{}
+	flagSet := getopt.New()
+	flagSet.BoolVarLong(&options.Form, "form", 'f', "serialize body in application/x-www-form-urlencoded")
+	flagSet.Parse(os.Args)
 
 	// Parse positional arguments
-	args := getopt.Args()
-	req, err := input.ParseArgs(args)
+	req, err := input.ParseArgs(flagSet.Args(), options)
 	if err != nil {
 		return err
 	}

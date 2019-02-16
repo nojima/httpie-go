@@ -27,7 +27,7 @@ const (
 	formFileFieldItem
 )
 
-func ParseArgs(args []string) (*Request, error) {
+func ParseArgs(args []string, options *Options) (*Request, error) {
 	var argMethod string
 	var argURL string
 	var argItems []string
@@ -55,8 +55,9 @@ func ParseArgs(args []string) (*Request, error) {
 	}
 	request.URL = u
 
+	preferredBodyType := determinePreferredBodyType(options)
 	for _, arg := range argItems {
-		if err := parseItem(arg, request); err != nil {
+		if err := parseItem(arg, request, preferredBodyType); err != nil {
 			return nil, err
 		}
 	}
@@ -72,6 +73,14 @@ func ParseArgs(args []string) (*Request, error) {
 	}
 
 	return request, nil
+}
+
+func determinePreferredBodyType(options *Options) BodyType {
+	if options.Form {
+		return FormBody
+	} else {
+		return JSONBody
+	}
 }
 
 func parseMethod(s string) (Method, error) {
@@ -116,15 +125,20 @@ func parseURL(s string) (*url.URL, error) {
 	return u, nil
 }
 
-func parseItem(s string, request *Request) error {
+func parseItem(s string, request *Request, preferredBodyType BodyType) error {
 	itemType, name, value := splitItem(s)
 	switch itemType {
 	case dataFieldItem:
-		request.Body.BodyType = JSONBody // TODO: support FormBody
+		if request.Body.BodyType == EmptyBody {
+			request.Body.BodyType = preferredBodyType
+		}
 		request.Body.Fields = append(request.Body.Fields, parseField(name, value))
 	case rawJSONFieldItem:
 		if !json.Valid([]byte(value)) {
 			return errors.Errorf("invalid JSON at '%s': %s", name, value)
+		}
+		if request.Body.BodyType != EmptyBody && request.Body.BodyType != JSONBody {
+			return errors.New("raw JSON field item cannot be used in non JSON body")
 		}
 		request.Body.BodyType = JSONBody
 		request.Body.RawJSONFields = append(request.Body.RawJSONFields, parseField(name, value))
@@ -136,8 +150,10 @@ func parseItem(s string, request *Request) error {
 	case urlParameterItem:
 		request.Parameters = append(request.Parameters, parseField(name, value))
 	case formFileFieldItem:
+		if request.Body.BodyType != EmptyBody && request.Body.BodyType != FormBody {
+			return errors.New("form file field item cannot be used in no form body")
+		}
 		request.Body.BodyType = FormBody
-		// TODO
 		return errors.New("form file field item is not implemented")
 	default:
 		return errors.Errorf("unknown request item: %s", s)
