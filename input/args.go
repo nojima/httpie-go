@@ -2,6 +2,8 @@ package input
 
 import (
 	"encoding/json"
+	"io"
+	"io/ioutil"
 	"net/url"
 	"regexp"
 	"strings"
@@ -38,7 +40,7 @@ func newUsageError(message string) error {
 	return errors.WithStack(&u)
 }
 
-func ParseArgs(args []string, options *Options) (*Request, error) {
+func ParseArgs(args []string, stdin io.Reader, options *Options) (*Request, error) {
 	var argMethod string
 	var argURL string
 	var argItems []string
@@ -70,6 +72,16 @@ func ParseArgs(args []string, options *Options) (*Request, error) {
 	for _, arg := range argItems {
 		if err := parseItem(arg, request, preferredBodyType); err != nil {
 			return nil, err
+		}
+	}
+	if options.ReadStdin {
+		if request.Body.BodyType != EmptyBody {
+			return nil, errors.New("request body (from stdin) and request item (key=value) cannot be mixed")
+		}
+		request.Body.BodyType = RawBody
+		request.Body.Raw, err = ioutil.ReadAll(stdin)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read stdin")
 		}
 	}
 

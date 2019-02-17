@@ -22,12 +22,14 @@ const (
 	EmptyBody BodyType = iota
 	JSONBody
 	FormBody
+	RawBody
 )
 
 type Body struct {
 	BodyType      BodyType
 	Fields        []Field
-	RawJSONFields []Field
+	RawJSONFields []Field // used only when BodyType == JSONBody
+	Raw           []byte  // used only when BodyType == RawBody
 }
 
 type Field struct {

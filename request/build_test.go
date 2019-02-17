@@ -300,3 +300,32 @@ func TestBuildHTTPBody_FormBody(t *testing.T) {
 		t.Errorf("invalid content length: len(body)=%v, actual=%v", len(actualBody), bodyTuple.contentLength)
 	}
 }
+
+func TestBuildHTTPBody_RawBody(t *testing.T) {
+	// Setup
+	body := input.Body{
+		BodyType: input.RawBody,
+		Raw:      []byte("Hello, World!!"),
+	}
+	request := &input.Request{Body: body}
+
+	// Exercise
+	bodyTuple, err := buildHTTPBody(request)
+	if err != nil {
+		t.Fatalf("unexpected error: err=%+v", err)
+	}
+
+	// Verify
+	expectedBody := "Hello, World!!"
+	actualBody := readAll(t, bodyTuple.body)
+	if actualBody != expectedBody {
+		t.Errorf("unexpected body: expected=%s, actual=%s", expectedBody, actualBody)
+	}
+	expectedContentType := "application/json"
+	if bodyTuple.contentType != expectedContentType {
+		t.Errorf("unexpected content type: expected=%s, actual=%s", expectedContentType, bodyTuple.contentType)
+	}
+	if bodyTuple.contentLength != int64(len(actualBody)) {
+		t.Errorf("invalid content length: len(body)=%v, actual=%v", len(actualBody), bodyTuple.contentLength)
+	}
+}
