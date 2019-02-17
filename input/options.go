@@ -1,5 +1,6 @@
 package input
 
 type Options struct {
-	Form bool
+	Form      bool
+	ReadStdin bool
 }

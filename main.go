@@ -15,13 +15,20 @@ import (
 func Main() error {
 	// Parse flags
 	options := &input.Options{}
+	var ignoreStdin bool
 	flagSet := getopt.New()
 	flagSet.SetParameters("[METHOD] URL [REQUEST_ITEM [REQUEST_ITEM ...]]")
 	flagSet.BoolVarLong(&options.Form, "form", 'f', "serialize body in application/x-www-form-urlencoded")
+	flagSet.BoolVarLong(&ignoreStdin, "ignore-stdin", 0, "do not attempt to read stdin")
 	flagSet.Parse(os.Args)
 
+	// Check stdin
+	if !ignoreStdin && !isatty.IsTerminal(os.Stdin.Fd()) {
+		options.ReadStdin = true
+	}
+
 	// Parse positional arguments
-	req, err := input.ParseArgs(flagSet.Args(), options)
+	req, err := input.ParseArgs(flagSet.Args(), os.Stdin, options)
 	if _, ok := errors.Cause(err).(*input.UsageError); ok {
 		flagSet.PrintUsage(os.Stderr)
 		return err

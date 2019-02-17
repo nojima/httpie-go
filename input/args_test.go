@@ -3,6 +3,7 @@ package input
 import (
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -18,6 +19,7 @@ func TestParseArgs(t *testing.T) {
 	testCases := []struct {
 		title           string
 		args            []string
+		stdin           string
 		options         *Options
 		expectedRequest *Request
 		shouldBeError   bool
@@ -78,6 +80,31 @@ func TestParseArgs(t *testing.T) {
 				URL:    mustURL("http://localhost/"),
 			},
 		},
+		{
+			title: "Read from stdin",
+			args:  []string{"example.com"},
+			stdin: "Hello, World!",
+			options: &Options{
+				ReadStdin: true,
+			},
+			expectedRequest: &Request{
+				Method: Method("POST"),
+				URL:    mustURL("http://example.com/"),
+				Body: Body{
+					BodyType: RawBody,
+					Raw:      []byte("Hello, World!"),
+				},
+			},
+		},
+		{
+			title: "stdin and request items mixed",
+			args:  []string{"example.com", "foo=bar"},
+			stdin: "Hello, World!",
+			options: &Options{
+				ReadStdin: true,
+			},
+			shouldBeError: true,
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.title, func(t *testing.T) {
@@ -88,7 +115,7 @@ func TestParseArgs(t *testing.T) {
 			}
 
 			// Exercise
-			request, err := ParseArgs(tt.args, options)
+			request, err := ParseArgs(tt.args, strings.NewReader(tt.stdin), options)
 			if (err != nil) != tt.shouldBeError {
 				t.Fatalf("unexpected error: shouldBeError=%v, err=%v", tt.shouldBeError, err)
 			}

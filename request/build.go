@@ -91,6 +91,8 @@ func buildHTTPBody(request *input.Request) (bodyTuple, error) {
 		return buildJSONBody(request)
 	case input.FormBody:
 		return buildFormBody(request)
+	case input.RawBody:
+		return buildRawBody(request)
 	default:
 		return bodyTuple{}, errors.Errorf("unknown body type: %v", request.Body.BodyType)
 	}
@@ -141,6 +143,14 @@ func buildFormBody(request *input.Request) (bodyTuple, error) {
 		body:          ioutil.NopCloser(strings.NewReader(body)),
 		contentLength: int64(len(body)),
 		contentType:   "application/x-www-form-urlencoded; charset=utf-8",
+	}, nil
+}
+
+func buildRawBody(request *input.Request) (bodyTuple, error) {
+	return bodyTuple{
+		body:          ioutil.NopCloser(bytes.NewReader(request.Body.Raw)),
+		contentLength: int64(len(request.Body.Raw)),
+		contentType:   "application/json",
 	}, nil
 }
 
