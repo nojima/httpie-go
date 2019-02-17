@@ -91,7 +91,7 @@ func parsePrintFlag(printFlag string, outputOptions *output.Options) error {
 	if printFlag == "\000" {
 		// --print is not specified
 		if isatty.IsTerminal(os.Stdout.Fd()) {
-			outputOptions.PrintRequestHeader = true
+			outputOptions.PrintResponseHeader = true
 			outputOptions.PrintResponseBody = true
 		} else {
 			outputOptions.PrintResponseBody = true
