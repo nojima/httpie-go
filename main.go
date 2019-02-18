@@ -14,13 +14,16 @@ import (
 
 func Main() error {
 	// Parse flags
-	flagSet, inputOptions, requestOptions, outputOptions, err := flags.Parse(os.Args)
+	flagSet, optionSet, err := flags.Parse(os.Args)
 	if err != nil {
 		return err
 	}
+	inputOptions := optionSet.InputOptions
+	requestOptions := optionSet.RequestOptions
+	outputOptions := optionSet.OutputOptions
 
 	// Parse positional arguments
-	req, err := input.ParseArgs(flagSet.Args(), os.Stdin, inputOptions)
+	req, err := input.ParseArgs(flagSet.Args(), os.Stdin, &inputOptions)
 	if _, ok := errors.Cause(err).(*input.UsageError); ok {
 		flagSet.PrintUsage(os.Stderr)
 		return err
@@ -30,7 +33,7 @@ func Main() error {
 	}
 
 	// Send request and receive response
-	resp, err := request.SendRequest(req, requestOptions)
+	resp, err := request.SendRequest(req, &requestOptions)
 	if err != nil {
 		return err
 	}
@@ -60,4 +63,3 @@ func Main() error {
 
 	return nil
 }
-

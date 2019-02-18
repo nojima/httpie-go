@@ -1,6 +1,7 @@
 package flags
 
 import (
+	"io"
 	"os"
 	"regexp"
 	"time"
@@ -15,11 +16,22 @@ import (
 
 var reNumber = regexp.MustCompile(`^[0-9.]+$`)
 
-func Parse(args []string) (*getopt.Set, *input.Options, *request.Options, *output.Options, error) {
+type FlagSet interface {
+	Args() []string
+	PrintUsage(w io.Writer)
+}
+
+type OptionSet struct {
+	InputOptions   input.Options
+	RequestOptions request.Options
+	OutputOptions  output.Options
+}
+
+func Parse(args []string) (FlagSet, *OptionSet, error) {
 	// Parse flags
-	inputOptions := &input.Options{}
-	outputOptions := &output.Options{}
-	requestOptions := &request.Options{}
+	inputOptions := input.Options{}
+	outputOptions := output.Options{}
+	requestOptions := request.Options{}
 	var ignoreStdin bool
 	printFlag := "\000" // "\000" is a special value that indicates user did not specified --print
 	timeout := "30s"
@@ -38,18 +50,23 @@ func Parse(args []string) (*getopt.Set, *input.Options, *request.Options, *outpu
 	}
 
 	// Parse --print
-	if err := parsePrintFlag(printFlag, outputOptions); err != nil {
-		return nil, nil, nil, nil, err
+	if err := parsePrintFlag(printFlag, &outputOptions); err != nil {
+		return nil, nil, err
 	}
 
 	// Parse --timeout
 	d, err := parseDurationOrSeconds(timeout)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, err
 	}
 	requestOptions.Timeout = d
 
-	return flagSet, inputOptions, requestOptions, outputOptions, nil
+	optionSet := &OptionSet{
+		InputOptions:   inputOptions,
+		RequestOptions: requestOptions,
+		OutputOptions:  outputOptions,
+	}
+	return flagSet, optionSet, nil
 }
 
 func parsePrintFlag(printFlag string, outputOptions *output.Options) error {
