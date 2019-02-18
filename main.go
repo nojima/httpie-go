@@ -13,7 +13,7 @@ import (
 
 func Main() error {
 	// Parse flags
-	flagSet, optionSet, err := flags.Parse(os.Args)
+	args, usage, optionSet, err := flags.Parse(os.Args)
 	if err != nil {
 		return err
 	}
@@ -22,9 +22,9 @@ func Main() error {
 	outputOptions := optionSet.OutputOptions
 
 	// Parse positional arguments
-	req, err := input.ParseArgs(flagSet.Args(), os.Stdin, &inputOptions)
+	req, err := input.ParseArgs(args, os.Stdin, &inputOptions)
 	if _, ok := errors.Cause(err).(*input.UsageError); ok {
-		flagSet.PrintUsage(os.Stderr)
+		usage.PrintUsage(os.Stderr)
 		return err
 	}
 	if err != nil {

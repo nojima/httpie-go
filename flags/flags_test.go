@@ -10,7 +10,7 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	flagSet, optionSet, err := parse([]string{}, terminalInfo{
+	args, _, optionSet, err := parse([]string{}, terminalInfo{
 		stdinIsTerminal:  true,
 		stdoutIsTerminal: true,
 	})
@@ -19,8 +19,8 @@ func TestParse(t *testing.T) {
 	}
 
 	var expectedArgs []string
-	if !reflect.DeepEqual(expectedArgs, flagSet.Args()) {
-		t.Errorf("unexpected returned args: expected=%v, actual=%v", expectedArgs, flagSet.Args())
+	if !reflect.DeepEqual(expectedArgs, args) {
+		t.Errorf("unexpected returned args: expected=%v, actual=%v", expectedArgs, args)
 	}
 	expectedOptionSet := &OptionSet{
 		RequestOptions: request.Options{

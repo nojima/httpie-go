@@ -16,8 +16,7 @@ import (
 
 var reNumber = regexp.MustCompile(`^[0-9.]+$`)
 
-type FlagSet interface {
-	Args() []string
+type Usage interface {
 	PrintUsage(w io.Writer)
 }
 
@@ -32,14 +31,14 @@ type terminalInfo struct {
 	stdoutIsTerminal bool
 }
 
-func Parse(args []string) (FlagSet, *OptionSet, error) {
+func Parse(args []string) ([]string, Usage, *OptionSet, error) {
 	return parse(args, terminalInfo{
 		stdinIsTerminal:  isatty.IsTerminal(os.Stdin.Fd()),
 		stdoutIsTerminal: isatty.IsTerminal(os.Stdout.Fd()),
 	})
 }
 
-func parse(args []string, terminalInfo terminalInfo) (FlagSet, *OptionSet, error) {
+func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSet, error) {
 	inputOptions := input.Options{}
 	outputOptions := output.Options{}
 	requestOptions := request.Options{}
@@ -62,13 +61,13 @@ func parse(args []string, terminalInfo terminalInfo) (FlagSet, *OptionSet, error
 
 	// Parse --print
 	if err := parsePrintFlag(printFlag, &outputOptions, terminalInfo); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Parse --timeout
 	d, err := parseDurationOrSeconds(timeout)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	requestOptions.Timeout = d
 
@@ -80,7 +79,7 @@ func parse(args []string, terminalInfo terminalInfo) (FlagSet, *OptionSet, error
 		RequestOptions: requestOptions,
 		OutputOptions:  outputOptions,
 	}
-	return flagSet, optionSet, nil
+	return flagSet.Args(), flagSet, optionSet, nil
 }
 
 func parsePrintFlag(printFlag string, outputOptions *output.Options, terminalInfo terminalInfo) error {
