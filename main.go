@@ -3,6 +3,8 @@ package httpie
 import (
 	"bufio"
 	"os"
+	"regexp"
+	"time"
 
 	"github.com/mattn/go-isatty"
 	"github.com/nojima/httpie-go/input"
@@ -12,8 +14,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+var reNumber = regexp.MustCompile(`^[0-9.]+$`)
+
 func Main() error {
-	flagSet, inputOptions, outputOptions, err := parseFlags()
+	flagSet, inputOptions, requestOptions, outputOptions, err := parseFlags()
 	if err != nil {
 		return err
 	}
@@ -29,7 +33,7 @@ func Main() error {
 	}
 
 	// Send request and receive response
-	resp, err := request.SendRequest(req)
+	resp, err := request.SendRequest(req, requestOptions)
 	if err != nil {
 		return err
 	}
@@ -60,18 +64,21 @@ func Main() error {
 	return nil
 }
 
-func parseFlags() (*getopt.Set, *input.Options, *output.Options, error) {
+func parseFlags() (*getopt.Set, *input.Options, *request.Options, *output.Options, error) {
 	// Parse flags
 	inputOptions := &input.Options{}
 	outputOptions := &output.Options{}
+	requestOptions := &request.Options{}
 	var ignoreStdin bool
 	printFlag := "\000" // "\000" is a special value that indicates user did not specified --print
+	timeout := "30s"
 
 	flagSet := getopt.New()
 	flagSet.SetParameters("[METHOD] URL [REQUEST_ITEM [REQUEST_ITEM ...]]")
 	flagSet.BoolVarLong(&inputOptions.Form, "form", 'f', "serialize body in application/x-www-form-urlencoded")
 	flagSet.StringVarLong(&printFlag, "print", 'p', "specifies what the output should contain (HBhb)")
 	flagSet.BoolVarLong(&ignoreStdin, "ignore-stdin", 0, "do not attempt to read stdin")
+	flagSet.StringVarLong(&timeout, "timeout", 0, "Timeout seconds that you allow the whole operation to take")
 	flagSet.Parse(os.Args)
 
 	// Check stdin
@@ -81,10 +88,17 @@ func parseFlags() (*getopt.Set, *input.Options, *output.Options, error) {
 
 	// Parse --print
 	if err := parsePrintFlag(printFlag, outputOptions); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	return flagSet, inputOptions, outputOptions, nil
+	// Parse --timeout
+	d, err := parseDurationOrSeconds(timeout)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	requestOptions.Timeout = d
+
+	return flagSet, inputOptions, requestOptions, outputOptions, nil
 }
 
 func parsePrintFlag(printFlag string, outputOptions *output.Options) error {
@@ -113,4 +127,15 @@ func parsePrintFlag(printFlag string, outputOptions *output.Options) error {
 		}
 	}
 	return nil
+}
+
+func parseDurationOrSeconds(timeout string) (time.Duration, error) {
+	if reNumber.MatchString(timeout) {
+		timeout += "s"
+	}
+	d, err := time.ParseDuration(timeout)
+	if err != nil {
+		return time.Duration(0), errors.Errorf("Value of --timeout must be a number or duration string: %v", timeout)
+	}
+	return d, nil
 }

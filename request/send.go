@@ -1,15 +1,13 @@
 package request
 
 import (
-	"net/http"
-	"time"
-
 	"github.com/nojima/httpie-go/input"
 	"github.com/pkg/errors"
+	"net/http"
 )
 
-func SendRequest(request *input.Request) (*http.Response, error) {
-	client, err := buildHTTPClient()
+func SendRequest(request *input.Request, options *Options) (*http.Response, error) {
+	client, err := buildHTTPClient(options)
 	if err != nil {
 		return nil, err
 	}
@@ -26,13 +24,13 @@ func SendRequest(request *input.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func buildHTTPClient() (*http.Client, error) {
+func buildHTTPClient(options *Options) (*http.Client, error) {
 	client := http.Client{
 		// Do not follow redirects
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
-		Timeout: 30 * time.Second,
+		Timeout: options.Timeout,
 	}
 	return &client, nil
 }
