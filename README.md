@@ -5,3 +5,9 @@
 [httpie](https://httpie.org/) written in Go.
 
 Currently under development...
+
+## How to build
+
+```
+go build ./cmd/hg
+```
