@@ -27,8 +27,19 @@ type OptionSet struct {
 	OutputOptions  output.Options
 }
 
+type terminalInfo struct {
+	stdinIsTerminal  bool
+	stdoutIsTerminal bool
+}
+
 func Parse(args []string) (FlagSet, *OptionSet, error) {
-	// Parse flags
+	return parse(args, terminalInfo{
+		stdinIsTerminal:  isatty.IsTerminal(os.Stdin.Fd()),
+		stdoutIsTerminal: isatty.IsTerminal(os.Stdout.Fd()),
+	})
+}
+
+func parse(args []string, terminalInfo terminalInfo) (FlagSet, *OptionSet, error) {
 	inputOptions := input.Options{}
 	outputOptions := output.Options{}
 	requestOptions := request.Options{}
@@ -45,12 +56,12 @@ func Parse(args []string) (FlagSet, *OptionSet, error) {
 	flagSet.Parse(args)
 
 	// Check stdin
-	if !ignoreStdin && !isatty.IsTerminal(os.Stdin.Fd()) {
+	if !ignoreStdin && !terminalInfo.stdinIsTerminal {
 		inputOptions.ReadStdin = true
 	}
 
 	// Parse --print
-	if err := parsePrintFlag(printFlag, &outputOptions); err != nil {
+	if err := parsePrintFlag(printFlag, &outputOptions, terminalInfo); err != nil {
 		return nil, nil, err
 	}
 
@@ -62,7 +73,7 @@ func Parse(args []string) (FlagSet, *OptionSet, error) {
 	requestOptions.Timeout = d
 
 	// Color
-	outputOptions.EnableColor = isatty.IsTerminal(os.Stdout.Fd())
+	outputOptions.EnableColor = terminalInfo.stdoutIsTerminal
 
 	optionSet := &OptionSet{
 		InputOptions:   inputOptions,
@@ -72,10 +83,10 @@ func Parse(args []string) (FlagSet, *OptionSet, error) {
 	return flagSet, optionSet, nil
 }
 
-func parsePrintFlag(printFlag string, outputOptions *output.Options) error {
+func parsePrintFlag(printFlag string, outputOptions *output.Options, terminalInfo terminalInfo) error {
 	if printFlag == "\000" {
 		// --print is not specified
-		if isatty.IsTerminal(os.Stdout.Fd()) {
+		if terminalInfo.stdoutIsTerminal {
 			outputOptions.PrintResponseHeader = true
 			outputOptions.PrintResponseBody = true
 		} else {
