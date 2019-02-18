@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"os"
 
-	"github.com/mattn/go-isatty"
 	"github.com/nojima/httpie-go/flags"
 	"github.com/nojima/httpie-go/input"
 	"github.com/nojima/httpie-go/output"
@@ -44,7 +43,7 @@ func Main() error {
 	defer writer.Flush()
 	printer := output.NewPrettyPrinter(output.PrettyPrinterConfig{
 		Writer:      writer,
-		EnableColor: isatty.IsTerminal(os.Stdout.Fd()),
+		EnableColor: outputOptions.EnableColor,
 	})
 	if outputOptions.PrintResponseHeader {
 		if err := printer.PrintStatusLine(resp); err != nil {

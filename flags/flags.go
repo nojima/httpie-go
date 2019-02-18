@@ -61,6 +61,9 @@ func Parse(args []string) (FlagSet, *OptionSet, error) {
 	}
 	requestOptions.Timeout = d
 
+	// Color
+	outputOptions.EnableColor = isatty.IsTerminal(os.Stdout.Fd())
+
 	optionSet := &OptionSet{
 		InputOptions:   inputOptions,
 		RequestOptions: requestOptions,

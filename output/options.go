@@ -5,4 +5,6 @@ type Options struct {
 	PrintRequestBody    bool
 	PrintResponseHeader bool
 	PrintResponseBody   bool
+
+	EnableColor bool
 }
