@@ -40,7 +40,7 @@ func newUsageError(message string) error {
 	return errors.WithStack(&u)
 }
 
-func ParseArgs(args []string, stdin io.Reader, options *Options) (*Request, error) {
+func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error) {
 	var argMethod string
 	var argURL string
 	var argItems []string
@@ -60,26 +60,26 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Request, erro
 		}
 	}
 
-	request := &Request{}
+	in := &Input{}
 
 	u, err := parseURL(argURL)
 	if err != nil {
 		return nil, err
 	}
-	request.URL = u
+	in.URL = u
 
 	preferredBodyType := determinePreferredBodyType(options)
 	for _, arg := range argItems {
-		if err := parseItem(arg, request, preferredBodyType); err != nil {
+		if err := parseItem(arg, in, preferredBodyType); err != nil {
 			return nil, err
 		}
 	}
 	if options.ReadStdin {
-		if request.Body.BodyType != EmptyBody {
+		if in.Body.BodyType != EmptyBody {
 			return nil, errors.New("request body (from stdin) and request item (key=value) cannot be mixed")
 		}
-		request.Body.BodyType = RawBody
-		request.Body.Raw, err = ioutil.ReadAll(stdin)
+		in.Body.BodyType = RawBody
+		in.Body.Raw, err = ioutil.ReadAll(stdin)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to read stdin")
 		}
@@ -90,12 +90,12 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Request, erro
 		if err != nil {
 			return nil, err
 		}
-		request.Method = method
+		in.Method = method
 	} else {
-		request.Method = guessMethod(request)
+		in.Method = guessMethod(in)
 	}
 
-	return request, nil
+	return in, nil
 }
 
 func determinePreferredBodyType(options *Options) BodyType {
@@ -115,8 +115,8 @@ func parseMethod(s string) (Method, error) {
 	return method, nil
 }
 
-func guessMethod(request *Request) Method {
-	if request.Body.BodyType == EmptyBody {
+func guessMethod(in *Input) Method {
+	if in.Body.BodyType == EmptyBody {
 		return Method("GET")
 	} else {
 		return Method("POST")
@@ -148,35 +148,35 @@ func parseURL(s string) (*url.URL, error) {
 	return u, nil
 }
 
-func parseItem(s string, request *Request, preferredBodyType BodyType) error {
+func parseItem(s string, in *Input, preferredBodyType BodyType) error {
 	itemType, name, value := splitItem(s)
 	switch itemType {
 	case dataFieldItem:
-		if request.Body.BodyType == EmptyBody {
-			request.Body.BodyType = preferredBodyType
+		if in.Body.BodyType == EmptyBody {
+			in.Body.BodyType = preferredBodyType
 		}
-		request.Body.Fields = append(request.Body.Fields, parseField(name, value))
+		in.Body.Fields = append(in.Body.Fields, parseField(name, value))
 	case rawJSONFieldItem:
 		if !json.Valid([]byte(value)) {
 			return errors.Errorf("invalid JSON at '%s': %s", name, value)
 		}
-		if request.Body.BodyType != EmptyBody && request.Body.BodyType != JSONBody {
+		if in.Body.BodyType != EmptyBody && in.Body.BodyType != JSONBody {
 			return errors.New("raw JSON field item cannot be used in non JSON body")
 		}
-		request.Body.BodyType = JSONBody
-		request.Body.RawJSONFields = append(request.Body.RawJSONFields, parseField(name, value))
+		in.Body.BodyType = JSONBody
+		in.Body.RawJSONFields = append(in.Body.RawJSONFields, parseField(name, value))
 	case httpHeaderItem:
 		if !isValidHeaderFieldName(name) {
 			return errors.Errorf("invalid header field name: %s", name)
 		}
-		request.Header.Fields = append(request.Header.Fields, parseField(name, value))
+		in.Header.Fields = append(in.Header.Fields, parseField(name, value))
 	case urlParameterItem:
-		request.Parameters = append(request.Parameters, parseField(name, value))
+		in.Parameters = append(in.Parameters, parseField(name, value))
 	case formFileFieldItem:
-		if request.Body.BodyType != EmptyBody && request.Body.BodyType != FormBody {
+		if in.Body.BodyType != EmptyBody && in.Body.BodyType != FormBody {
 			return errors.New("form file field item cannot be used in no form body")
 		}
-		request.Body.BodyType = FormBody
+		in.Body.BodyType = FormBody
 		return errors.New("form file field item is not implemented")
 	default:
 		return errors.Errorf("unknown request item: %s", s)

@@ -23,7 +23,7 @@ func parseURL(t *testing.T, rawurl string) *url.URL {
 
 func TestBuildHTTPRequest(t *testing.T) {
 	// Setup
-	request := &input.Request{
+	in := &input.Input{
 		Method: input.Method("POST"),
 		URL:    parseURL(t, "https://localhost:4000/foo"),
 		Parameters: []input.Field{
@@ -44,7 +44,7 @@ func TestBuildHTTPRequest(t *testing.T) {
 	}
 
 	// Exercise
-	actual, err := BuildHTTPRequest(request)
+	actual, err := BuildHTTPRequest(in)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%v", err)
 	}
@@ -125,11 +125,11 @@ func TestBuildURL(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.title, func(t *testing.T) {
-			request := &input.Request{
+			in := &input.Input{
 				URL:        parseURL(t, tt.url),
 				Parameters: tt.parameters,
 			}
-			u, err := buildURL(request)
+			u, err := buildURL(in)
 			if err != nil {
 				t.Fatalf("unexpected error: err=%v", err)
 			}
@@ -164,10 +164,10 @@ func TestBuildHTTPHeader(t *testing.T) {
 			{Name: "X-Multi-Value", Value: "value 2"},
 		},
 	}
-	request := &input.Request{Header: header}
+	in := &input.Input{Header: header}
 
 	// Exercise
-	httpHeader, err := buildHTTPHeader(request)
+	httpHeader, err := buildHTTPHeader(in)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%+v", err)
 	}
@@ -209,10 +209,10 @@ func TestBuildHTTPBody_EmptyBody(t *testing.T) {
 	body := input.Body{
 		BodyType: input.EmptyBody,
 	}
-	request := &input.Request{Body: body}
+	in := &input.Input{Body: body}
 
 	// Exercise
-	actual, err := buildHTTPBody(request)
+	actual, err := buildHTTPBody(in)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%+v", err)
 	}
@@ -239,10 +239,10 @@ func TestBuildHTTPBody_JSONBody(t *testing.T) {
 			{Name: "array", Value: `[1, null, "hello"]`},
 		},
 	}
-	request := &input.Request{Body: body}
+	in := &input.Input{Body: body}
 
 	// Exercise
-	bodyTuple, err := buildHTTPBody(request)
+	bodyTuple, err := buildHTTPBody(in)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%+v", err)
 	}
@@ -278,10 +278,10 @@ func TestBuildHTTPBody_FormBody(t *testing.T) {
 			{Name: "from_file", Value: fileName, IsFile: true},
 		},
 	}
-	request := &input.Request{Body: body}
+	in := &input.Input{Body: body}
 
 	// Exercise
-	bodyTuple, err := buildHTTPBody(request)
+	bodyTuple, err := buildHTTPBody(in)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%+v", err)
 	}
@@ -307,10 +307,10 @@ func TestBuildHTTPBody_RawBody(t *testing.T) {
 		BodyType: input.RawBody,
 		Raw:      []byte("Hello, World!!"),
 	}
-	request := &input.Request{Body: body}
+	in := &input.Input{Body: body}
 
 	// Exercise
-	bodyTuple, err := buildHTTPBody(request)
+	bodyTuple, err := buildHTTPBody(in)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%+v", err)
 	}

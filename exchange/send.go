@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func SendRequest(request *input.Request, options *Options) (*http.Response, error) {
+func SendRequest(request *input.Input, options *Options) (*http.Response, error) {
 	client, err := BuildHTTPClient(options)
 	if err != nil {
 		return nil, err

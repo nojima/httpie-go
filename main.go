@@ -22,7 +22,7 @@ func Main() error {
 	outputOptions := optionSet.OutputOptions
 
 	// Parse positional arguments
-	req, err := input.ParseArgs(args, os.Stdin, &inputOptions)
+	in, err := input.ParseArgs(args, os.Stdin, &inputOptions)
 	if _, ok := errors.Cause(err).(*input.UsageError); ok {
 		usage.PrintUsage(os.Stderr)
 		return err
@@ -32,15 +32,15 @@ func Main() error {
 	}
 
 	// Send request and receive response
-	if err := Exchange(req, &exchangeOptions, &outputOptions); err != nil {
+	if err := Exchange(in, &exchangeOptions, &outputOptions); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func Exchange(req *input.Request, exchangeOptions *exchange.Options, outputOptions *output.Options) error {
-	resp, err := exchange.SendRequest(req, exchangeOptions)
+func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions *output.Options) error {
+	resp, err := exchange.SendRequest(in, exchangeOptions)
 	if err != nil {
 		return err
 	}

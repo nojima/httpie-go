@@ -2,7 +2,7 @@ package input
 
 import "net/url"
 
-type Request struct {
+type Input struct {
 	Method     Method
 	URL        *url.URL
 	Parameters []Field

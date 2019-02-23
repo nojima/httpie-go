@@ -17,17 +17,17 @@ func mustURL(rawurl string) *url.URL {
 
 func TestParseArgs(t *testing.T) {
 	testCases := []struct {
-		title           string
-		args            []string
-		stdin           string
-		options         *Options
-		expectedRequest *Request
-		shouldBeError   bool
+		title         string
+		args          []string
+		stdin         string
+		options       *Options
+		expectedInput *Input
+		shouldBeError bool
 	}{
 		{
 			title: "Happy case",
 			args:  []string{"GET", "http://example.com/hello"},
-			expectedRequest: &Request{
+			expectedInput: &Input{
 				Method: Method("GET"),
 				URL:    mustURL("http://example.com/hello"),
 			},
@@ -36,7 +36,7 @@ func TestParseArgs(t *testing.T) {
 		{
 			title: "Method is omitted (only host)",
 			args:  []string{"localhost"},
-			expectedRequest: &Request{
+			expectedInput: &Input{
 				Method: Method("GET"),
 				URL:    mustURL("http://localhost/"),
 			},
@@ -44,7 +44,7 @@ func TestParseArgs(t *testing.T) {
 		{
 			title: "Method is omitted (JSON body)",
 			args:  []string{"example.com", "foo=bar"},
-			expectedRequest: &Request{
+			expectedInput: &Input{
 				Method: Method("POST"),
 				URL:    mustURL("http://example.com/"),
 				Body: Body{
@@ -58,7 +58,7 @@ func TestParseArgs(t *testing.T) {
 		{
 			title: "Method is omitted (query parameter)",
 			args:  []string{"example.com", "foo==bar"},
-			expectedRequest: &Request{
+			expectedInput: &Input{
 				Method: Method("GET"),
 				URL:    mustURL("http://example.com/"),
 				Parameters: []Field{
@@ -67,15 +67,15 @@ func TestParseArgs(t *testing.T) {
 			},
 		},
 		{
-			title:           "URL missing",
-			args:            []string{},
-			expectedRequest: nil,
-			shouldBeError:   true,
+			title:         "URL missing",
+			args:          []string{},
+			expectedInput: nil,
+			shouldBeError: true,
 		},
 		{
 			title: "Lower case method",
 			args:  []string{"get", "localhost"},
-			expectedRequest: &Request{
+			expectedInput: &Input{
 				Method: Method("GET"),
 				URL:    mustURL("http://localhost/"),
 			},
@@ -87,7 +87,7 @@ func TestParseArgs(t *testing.T) {
 			options: &Options{
 				ReadStdin: true,
 			},
-			expectedRequest: &Request{
+			expectedInput: &Input{
 				Method: Method("POST"),
 				URL:    mustURL("http://example.com/"),
 				Body: Body{
@@ -115,7 +115,7 @@ func TestParseArgs(t *testing.T) {
 			}
 
 			// Exercise
-			request, err := ParseArgs(tt.args, strings.NewReader(tt.stdin), options)
+			input, err := ParseArgs(tt.args, strings.NewReader(tt.stdin), options)
 			if (err != nil) != tt.shouldBeError {
 				t.Fatalf("unexpected error: shouldBeError=%v, err=%v", tt.shouldBeError, err)
 			}
@@ -124,8 +124,8 @@ func TestParseArgs(t *testing.T) {
 			}
 
 			// Verify
-			if !reflect.DeepEqual(request, tt.expectedRequest) {
-				t.Errorf("unexpected request: expected=%+v, actual=%+v", tt.expectedRequest, request)
+			if !reflect.DeepEqual(input, tt.expectedInput) {
+				t.Errorf("unexpected input: expected=%+v, actual=%+v", tt.expectedInput, input)
 			}
 		})
 	}
@@ -226,7 +226,7 @@ func TestParseItem(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.title, func(t *testing.T) {
 			// Setup
-			request := Request{}
+			request := Input{}
 			request.Body.BodyType = tt.currentBodyType
 			preferredBodyType := JSONBody
 			if tt.preferredBodyType != EmptyBody {

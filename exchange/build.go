@@ -13,18 +13,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-func BuildHTTPRequest(request *input.Request) (*http.Request, error) {
-	u, err := buildURL(request)
+func BuildHTTPRequest(in *input.Input) (*http.Request, error) {
+	u, err := buildURL(in)
 	if err != nil {
 		return nil, err
 	}
 
-	header, err := buildHTTPHeader(request)
+	header, err := buildHTTPHeader(in)
 	if err != nil {
 		return nil, err
 	}
 
-	bodyTuple, err := buildHTTPBody(request)
+	bodyTuple, err := buildHTTPBody(in)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func BuildHTTPRequest(request *input.Request) (*http.Request, error) {
 	}
 
 	r := http.Request{
-		Method:        string(request.Method),
+		Method:        string(in.Method),
 		URL:           u,
 		Header:        header,
 		Host:          header.Get("Host"),
@@ -47,12 +47,12 @@ func BuildHTTPRequest(request *input.Request) (*http.Request, error) {
 	return &r, nil
 }
 
-func buildURL(request *input.Request) (*url.URL, error) {
-	q, err := url.ParseQuery(request.URL.RawQuery)
+func buildURL(in *input.Input) (*url.URL, error) {
+	q, err := url.ParseQuery(in.URL.RawQuery)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing query string")
 	}
-	for _, field := range request.Parameters {
+	for _, field := range in.Parameters {
 		value, err := resolveFieldValue(field)
 		if err != nil {
 			return nil, err
@@ -60,14 +60,14 @@ func buildURL(request *input.Request) (*url.URL, error) {
 		q.Add(field.Name, value)
 	}
 
-	u := *request.URL
+	u := *in.URL
 	u.RawQuery = q.Encode()
 	return &u, nil
 }
 
-func buildHTTPHeader(request *input.Request) (http.Header, error) {
+func buildHTTPHeader(in *input.Input) (http.Header, error) {
 	header := make(http.Header)
-	for _, field := range request.Header.Fields {
+	for _, field := range in.Header.Fields {
 		value, err := resolveFieldValue(field)
 		if err != nil {
 			return nil, err
@@ -83,31 +83,31 @@ type bodyTuple struct {
 	contentType   string
 }
 
-func buildHTTPBody(request *input.Request) (bodyTuple, error) {
-	switch request.Body.BodyType {
+func buildHTTPBody(in *input.Input) (bodyTuple, error) {
+	switch in.Body.BodyType {
 	case input.EmptyBody:
 		return bodyTuple{}, nil
 	case input.JSONBody:
-		return buildJSONBody(request)
+		return buildJSONBody(in)
 	case input.FormBody:
-		return buildFormBody(request)
+		return buildFormBody(in)
 	case input.RawBody:
-		return buildRawBody(request)
+		return buildRawBody(in)
 	default:
-		return bodyTuple{}, errors.Errorf("unknown body type: %v", request.Body.BodyType)
+		return bodyTuple{}, errors.Errorf("unknown body type: %v", in.Body.BodyType)
 	}
 }
 
-func buildJSONBody(request *input.Request) (bodyTuple, error) {
+func buildJSONBody(in *input.Input) (bodyTuple, error) {
 	obj := map[string]interface{}{}
-	for _, field := range request.Body.Fields {
+	for _, field := range in.Body.Fields {
 		value, err := resolveFieldValue(field)
 		if err != nil {
 			return bodyTuple{}, err
 		}
 		obj[field.Name] = value
 	}
-	for _, field := range request.Body.RawJSONFields {
+	for _, field := range in.Body.RawJSONFields {
 		value, err := resolveFieldValue(field)
 		if err != nil {
 			return bodyTuple{}, err
@@ -129,9 +129,9 @@ func buildJSONBody(request *input.Request) (bodyTuple, error) {
 	}, nil
 }
 
-func buildFormBody(request *input.Request) (bodyTuple, error) {
+func buildFormBody(in *input.Input) (bodyTuple, error) {
 	form := url.Values{}
-	for _, field := range request.Body.Fields {
+	for _, field := range in.Body.Fields {
 		value, err := resolveFieldValue(field)
 		if err != nil {
 			return bodyTuple{}, err
@@ -146,10 +146,10 @@ func buildFormBody(request *input.Request) (bodyTuple, error) {
 	}, nil
 }
 
-func buildRawBody(request *input.Request) (bodyTuple, error) {
+func buildRawBody(in *input.Input) (bodyTuple, error) {
 	return bodyTuple{
-		body:          ioutil.NopCloser(bytes.NewReader(request.Body.Raw)),
-		contentLength: int64(len(request.Body.Raw)),
+		body:          ioutil.NopCloser(bytes.NewReader(in.Body.Raw)),
+		contentLength: int64(len(in.Body.Raw)),
 		contentType:   "application/json",
 	}, nil
 }
