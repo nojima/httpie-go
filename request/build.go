@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func buildHTTPRequest(request *input.Request) (*http.Request, error) {
+func BuildHTTPRequest(request *input.Request) (*http.Request, error) {
 	u, err := buildURL(request)
 	if err != nil {
 		return nil, err

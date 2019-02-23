@@ -32,7 +32,15 @@ func Main() error {
 	}
 
 	// Send request and receive response
-	resp, err := request.SendRequest(req, &requestOptions)
+	if err := Exchange(req, &requestOptions, &outputOptions); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func Exchange(req *input.Request, requestOptions *request.Options, outputOptions *output.Options) error {
+	resp, err := request.SendRequest(req, requestOptions)
 	if err != nil {
 		return err
 	}

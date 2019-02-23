@@ -44,7 +44,7 @@ func TestBuildHTTPRequest(t *testing.T) {
 	}
 
 	// Exercise
-	actual, err := buildHTTPRequest(request)
+	actual, err := BuildHTTPRequest(request)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%v", err)
 	}
