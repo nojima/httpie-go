@@ -2,9 +2,18 @@ package output
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 )
+
+func parseURL(t *testing.T, rawurl string) *url.URL {
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		t.Fatalf("failed to parse URL: url=%s, err=%s", u, err)
+	}
+	return u
+}
 
 func TestPrettyPrinter_PrintStatusLine(t *testing.T) {
 	// Setup
@@ -27,6 +36,32 @@ func TestPrettyPrinter_PrintStatusLine(t *testing.T) {
 
 	// Verify
 	expected := "HTTP/1.1 200 OK\n"
+	if buffer.String() != expected {
+		t.Errorf("unexpected output: expected=%s, actual=%s", expected, buffer.String())
+	}
+}
+
+func TestPrettyPrinter_PrintRequestLine(t *testing.T) {
+	// Setup
+	var buffer strings.Builder
+	printer := NewPrettyPrinter(PrettyPrinterConfig{
+		Writer:      &buffer,
+		EnableColor: false,
+	})
+	request := &http.Request{
+		Method: "GET",
+		URL:    parseURL(t, "http://example.com/hello?foo=bar&hoge=piyo"),
+		Proto:  "HTTP/1.1",
+	}
+
+	// Exercise
+	err := printer.PrintRequestLine(request)
+	if err != nil {
+		t.Fatalf("unexpected error: err=%+v", err)
+	}
+
+	// Verify
+	expected := "GET http://example.com/hello?foo=bar&hoge=piyo HTTP/1.1\n"
 	if buffer.String() != expected {
 		t.Errorf("unexpected output: expected=%s, actual=%s", expected, buffer.String())
 	}

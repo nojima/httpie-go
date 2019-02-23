@@ -29,6 +29,8 @@ type PrettyPrinterConfig struct {
 }
 
 type HeaderPalette struct {
+	Method              aurora.Color
+	URL                 aurora.Color
 	Proto               aurora.Color
 	SuccessfulStatus    aurora.Color
 	NonSuccessfulStatus aurora.Color
@@ -38,6 +40,8 @@ type HeaderPalette struct {
 }
 
 var defaultHeaderPalette = HeaderPalette{
+	Method:              aurora.GrayFg | aurora.BoldFm,
+	URL:                 aurora.GreenFg | aurora.BoldFm,
 	Proto:               aurora.BlueFg,
 	SuccessfulStatus:    aurora.GreenFg | aurora.BoldFm,
 	NonSuccessfulStatus: aurora.BrownFg | aurora.BoldFm,
@@ -89,6 +93,14 @@ func (p *PrettyPrinter) PrintStatusLine(resp *http.Response) error {
 	return nil
 }
 
+func (p *PrettyPrinter) PrintRequestLine(req *http.Request) error {
+	fmt.Fprintf(p.writer, "%s %s %s\n",
+		p.aurora.Colorize(req.Method, p.headerPalette.Method),
+		p.aurora.Colorize(req.URL, p.headerPalette.URL),
+		p.aurora.Colorize(req.Proto, p.headerPalette.Proto))
+	return nil
+}
+
 func (p *PrettyPrinter) PrintHeader(header http.Header) error {
 	var names []string
 	for name := range header {
@@ -129,12 +141,15 @@ func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
 
 	content, err := ioutil.ReadAll(body)
 	if err != nil {
-		return errors.Wrap(err, "reading response body")
+		return errors.Wrap(err, "reading body")
 	}
 
 	var v interface{}
 	if err := json.Unmarshal(content, &v); err != nil {
-		return errors.Wrap(err, "parsing response body as JSON")
+		// Failed to parse body as JSON. Print as-is.
+		p.writer.Write(content)
+		fmt.Fprintln(p.writer)
+		return nil
 	}
 	if err := p.printJSON(v, 0); err != nil {
 		return err
