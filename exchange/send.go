@@ -1,4 +1,4 @@
-package request
+package exchange
 
 import (
 	"github.com/nojima/httpie-go/input"

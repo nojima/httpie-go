@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"os"
 
+	"github.com/nojima/httpie-go/exchange"
 	"github.com/nojima/httpie-go/flags"
 	"github.com/nojima/httpie-go/input"
 	"github.com/nojima/httpie-go/output"
-	"github.com/nojima/httpie-go/request"
 	"github.com/pkg/errors"
 )
 
@@ -18,7 +18,7 @@ func Main() error {
 		return err
 	}
 	inputOptions := optionSet.InputOptions
-	requestOptions := optionSet.RequestOptions
+	exchangeOptions := optionSet.ExchangeOptions
 	outputOptions := optionSet.OutputOptions
 
 	// Parse positional arguments
@@ -32,15 +32,15 @@ func Main() error {
 	}
 
 	// Send request and receive response
-	if err := Exchange(req, &requestOptions, &outputOptions); err != nil {
+	if err := Exchange(req, &exchangeOptions, &outputOptions); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func Exchange(req *input.Request, requestOptions *request.Options, outputOptions *output.Options) error {
-	resp, err := request.SendRequest(req, requestOptions)
+func Exchange(req *input.Request, exchangeOptions *exchange.Options, outputOptions *output.Options) error {
+	resp, err := exchange.SendRequest(req, exchangeOptions)
 	if err != nil {
 		return err
 	}
