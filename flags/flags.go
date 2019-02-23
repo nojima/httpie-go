@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/mattn/go-isatty"
+	"github.com/nojima/httpie-go/exchange"
 	"github.com/nojima/httpie-go/input"
 	"github.com/nojima/httpie-go/output"
-	"github.com/nojima/httpie-go/request"
 	"github.com/pborman/getopt"
 	"github.com/pkg/errors"
 )
@@ -21,9 +21,9 @@ type Usage interface {
 }
 
 type OptionSet struct {
-	InputOptions   input.Options
-	RequestOptions request.Options
-	OutputOptions  output.Options
+	InputOptions    input.Options
+	ExchangeOptions exchange.Options
+	OutputOptions   output.Options
 }
 
 type terminalInfo struct {
@@ -41,7 +41,7 @@ func Parse(args []string) ([]string, Usage, *OptionSet, error) {
 func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSet, error) {
 	inputOptions := input.Options{}
 	outputOptions := output.Options{}
-	requestOptions := request.Options{}
+	exchangeOptions := exchange.Options{}
 	var ignoreStdin bool
 	printFlag := "\000" // "\000" is a special value that indicates user did not specified --print
 	timeout := "30s"
@@ -69,15 +69,15 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	requestOptions.Timeout = d
+	exchangeOptions.Timeout = d
 
 	// Color
 	outputOptions.EnableColor = terminalInfo.stdoutIsTerminal
 
 	optionSet := &OptionSet{
-		InputOptions:   inputOptions,
-		RequestOptions: requestOptions,
-		OutputOptions:  outputOptions,
+		InputOptions:    inputOptions,
+		ExchangeOptions: exchangeOptions,
+		OutputOptions:   outputOptions,
 	}
 	return flagSet.Args(), flagSet, optionSet, nil
 }

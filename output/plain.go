@@ -23,6 +23,11 @@ func (p *PlainPrinter) PrintStatusLine(resp *http.Response) error {
 	return nil
 }
 
+func (p *PlainPrinter) PrintRequestLine(req *http.Request) error {
+	fmt.Fprintf(p.writer, "%s %s %s\n", req.Method, req.URL, req.Proto)
+	return nil
+}
+
 func (p *PlainPrinter) PrintHeader(header http.Header) error {
 	for name, values := range header {
 		for _, value := range values {
@@ -36,7 +41,7 @@ func (p *PlainPrinter) PrintHeader(header http.Header) error {
 func (p *PlainPrinter) PrintBody(body io.Reader, contentType string) error {
 	_, err := io.Copy(p.writer, body)
 	if err != nil {
-		return errors.Wrap(err, "printing response body")
+		return errors.Wrap(err, "printing body")
 	}
 	return nil
 }

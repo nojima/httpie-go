@@ -2,12 +2,16 @@ package httpie
 
 import (
 	"bufio"
+	"bytes"
+	"fmt"
+	"net/http"
+	"net/http/httputil"
 	"os"
 
+	"github.com/nojima/httpie-go/exchange"
 	"github.com/nojima/httpie-go/flags"
 	"github.com/nojima/httpie-go/input"
 	"github.com/nojima/httpie-go/output"
-	"github.com/nojima/httpie-go/request"
 	"github.com/pkg/errors"
 )
 
@@ -18,11 +22,11 @@ func Main() error {
 		return err
 	}
 	inputOptions := optionSet.InputOptions
-	requestOptions := optionSet.RequestOptions
+	exchangeOptions := optionSet.ExchangeOptions
 	outputOptions := optionSet.OutputOptions
 
 	// Parse positional arguments
-	req, err := input.ParseArgs(args, os.Stdin, &inputOptions)
+	in, err := input.ParseArgs(args, os.Stdin, &inputOptions)
 	if _, ok := errors.Cause(err).(*input.UsageError); ok {
 		usage.PrintUsage(os.Stderr)
 		return err
@@ -32,19 +36,71 @@ func Main() error {
 	}
 
 	// Send request and receive response
-	resp, err := request.SendRequest(req, &requestOptions)
-	if err != nil {
+	if err := Exchange(in, &exchangeOptions, &outputOptions); err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 
-	// Print response
+	return nil
+}
+
+func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions *output.Options) error {
+	// Prepare printer
 	writer := bufio.NewWriter(os.Stdout)
 	defer writer.Flush()
 	printer := output.NewPrettyPrinter(output.PrettyPrinterConfig{
 		Writer:      writer,
 		EnableColor: outputOptions.EnableColor,
 	})
+
+	// Build HTTP request
+	request, err := exchange.BuildHTTPRequest(in)
+	if err != nil {
+		return err
+	}
+
+	// Print HTTP request
+	if outputOptions.PrintRequestHeader || outputOptions.PrintRequestBody {
+		// `request` does not contain HTTP headers that HttpClient.Do adds.
+		// We can get these headers by DumpRequestOut and ReadRequest.
+		dump, err := httputil.DumpRequestOut(request, true)
+		if err != nil {
+			return err // should not happen
+		}
+		r, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(dump)))
+		if err != nil {
+			return err // should not happen
+		}
+		defer r.Body.Close()
+
+		if outputOptions.PrintRequestHeader {
+			if err := printer.PrintRequestLine(r); err != nil {
+				return err
+			}
+			if err := printer.PrintHeader(r.Header); err != nil {
+				return err
+			}
+		}
+		if outputOptions.PrintRequestBody {
+			if err := printer.PrintBody(r.Body, r.Header.Get("Content-Type")); err != nil {
+				return err
+			}
+		}
+		fmt.Fprintln(writer)
+		writer.Flush()
+	}
+
+	// Send HTTP request and receive HTTP request
+	httpClient, err := exchange.BuildHTTPClient(exchangeOptions)
+	if err != nil {
+		return err
+	}
+	resp, err := httpClient.Do(request)
+	if err != nil {
+		return errors.Wrap(err, "sending HTTP request")
+	}
+	defer resp.Body.Close()
+
+	// Print response
 	if outputOptions.PrintResponseHeader {
 		if err := printer.PrintStatusLine(resp); err != nil {
 			return err

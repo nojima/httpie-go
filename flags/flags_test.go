@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nojima/httpie-go/exchange"
 	"github.com/nojima/httpie-go/output"
-	"github.com/nojima/httpie-go/request"
 )
 
 func TestParse(t *testing.T) {
@@ -23,7 +23,7 @@ func TestParse(t *testing.T) {
 		t.Errorf("unexpected returned args: expected=%v, actual=%v", expectedArgs, args)
 	}
 	expectedOptionSet := &OptionSet{
-		RequestOptions: request.Options{
+		ExchangeOptions: exchange.Options{
 			Timeout: 30 * time.Second,
 		},
 		OutputOptions: output.Options{
