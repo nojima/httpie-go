@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/nojima/httpie-go/input"
+	"github.com/nojima/httpie-go/version"
 	"github.com/pkg/errors"
 )
 
@@ -38,7 +39,7 @@ func BuildHTTPRequest(in *input.Input) (*http.Request, error) {
 		header.Set("Content-Type", bodyTuple.contentType)
 	}
 	if header.Get("User-Agent") == "" {
-		header.Set("User-Agent", "httpie-go/0.0.0")
+		header.Set("User-Agent", fmt.Sprintf("httpie-go/%s", version.Current()))
 	}
 
 	r := http.Request{

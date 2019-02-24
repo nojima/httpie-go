@@ -1,6 +1,7 @@
 package flags
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"regexp"
@@ -10,6 +11,7 @@ import (
 	"github.com/nojima/httpie-go/exchange"
 	"github.com/nojima/httpie-go/input"
 	"github.com/nojima/httpie-go/output"
+	"github.com/nojima/httpie-go/version"
 	"github.com/pborman/getopt"
 	"github.com/pkg/errors"
 )
@@ -49,6 +51,7 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	printFlag := "\000" // "\000" is a special value that indicates user did not specified --print
 	timeout := "30s"
 	var prettyFlag string
+	var versionFlag bool
 
 	// Default value 20 is a bit too small for options of httpie-go.
 	getopt.HelpColumn = 22
@@ -63,7 +66,14 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	flagSet.BoolVarLong(&ignoreStdin, "ignore-stdin", 0, "do not attempt to read stdin")
 	flagSet.StringVarLong(&timeout, "timeout", 0, "timeout seconds that you allow the whole operation to take")
 	flagSet.StringVarLong(&prettyFlag, "pretty", 0, "controls output formatting (all, format, none)")
+	flagSet.BoolVarLong(&versionFlag, "version", 0, "print version and exit")
 	flagSet.Parse(args)
+
+	// Check --version
+	if versionFlag {
+		fmt.Fprintf(os.Stderr, "httpie-go %s\n", version.Current())
+		os.Exit(0)
+	}
 
 	// Check stdin
 	if !ignoreStdin && !terminalInfo.stdinIsTerminal {
