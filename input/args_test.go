@@ -246,7 +246,7 @@ func TestParseItem(t *testing.T) {
 			}
 
 			// Exercise
-			err := parseItem(tt.item, &in, preferredBodyType)
+			err := parseItem(tt.item, preferredBodyType, &in)
 			if (err != nil) != tt.shouldBeError {
 				t.Fatalf("unexpected error: shouldBeError=%v, err=%v", tt.shouldBeError, err)
 			}

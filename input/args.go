@@ -60,7 +60,7 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error)
 		}
 	}
 
-	in := &Input{}
+	in := Input{}
 
 	u, err := parseURL(argURL)
 	if err != nil {
@@ -70,7 +70,7 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error)
 
 	preferredBodyType := determinePreferredBodyType(options)
 	for _, arg := range argItems {
-		if err := parseItem(arg, in, preferredBodyType); err != nil {
+		if err := parseItem(arg, preferredBodyType, &in); err != nil {
 			return nil, err
 		}
 	}
@@ -92,10 +92,10 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error)
 		}
 		in.Method = method
 	} else {
-		in.Method = guessMethod(in)
+		in.Method = guessMethod(&in)
 	}
 
-	return in, nil
+	return &in, nil
 }
 
 func determinePreferredBodyType(options *Options) BodyType {
@@ -148,7 +148,7 @@ func parseURL(s string) (*url.URL, error) {
 	return u, nil
 }
 
-func parseItem(s string, in *Input, preferredBodyType BodyType) error {
+func parseItem(s string, preferredBodyType BodyType, in *Input) error {
 	itemType, name, value := splitItem(s)
 	switch itemType {
 	case dataFieldItem:
