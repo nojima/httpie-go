@@ -134,7 +134,7 @@ func TestParseArgs(t *testing.T) {
 func TestParseItem(t *testing.T) {
 	testCases := []struct {
 		title                     string
-		input                     string
+		item                      string
 		preferredBodyType         BodyType
 		expectedBodyFields        []Field
 		expectedBodyRawJSONFields []Field
@@ -146,92 +146,92 @@ func TestParseItem(t *testing.T) {
 	}{
 		{
 			title:              "Data field",
-			input:              "hello=world",
+			item:               "hello=world",
 			expectedBodyFields: []Field{{Name: "hello", Value: "world"}},
 			expectedBodyType:   JSONBody,
 		},
 		{
 			title:              "Data field in JSON body type",
-			input:              "hello=world",
+			item:               "hello=world",
 			preferredBodyType:  JSONBody,
 			expectedBodyFields: []Field{{Name: "hello", Value: "world"}},
 			expectedBodyType:   JSONBody,
 		},
 		{
 			title:              "Data field (form)",
-			input:              "hello=world",
+			item:               "hello=world",
 			preferredBodyType:  FormBody,
 			expectedBodyFields: []Field{{Name: "hello", Value: "world"}},
 			expectedBodyType:   FormBody,
 		},
 		{
 			title:              "Data field with empty value",
-			input:              "hello=",
+			item:               "hello=",
 			expectedBodyFields: []Field{{Name: "hello", Value: ""}},
 			expectedBodyType:   JSONBody,
 		},
 		{
 			title:              "Data field from file",
-			input:              "hello=@world.txt",
+			item:               "hello=@world.txt",
 			expectedBodyFields: []Field{{Name: "hello", Value: "world.txt", IsFile: true}},
 			expectedBodyType:   JSONBody,
 		},
 		{
 			title:                     "Raw JSON field",
-			input:                     `hello:=[1, true, "world"]`,
+			item:                      `hello:=[1, true, "world"]`,
 			expectedBodyRawJSONFields: []Field{{Name: "hello", Value: `[1, true, "world"]`}},
 			expectedBodyType:          JSONBody,
 		},
 		{
 			title:         "Raw JSON field with invalid JSON",
-			input:         `hello:={invalid: JSON}`,
+			item:          `hello:={invalid: JSON}`,
 			shouldBeError: true,
 		},
 		{
 			title:             "Raw JSON field in form body type",
-			input:             `hello:=[1, true, "world"]`,
+			item:              `hello:=[1, true, "world"]`,
 			preferredBodyType: FormBody,
 			shouldBeError:     true,
 		},
 		{
 			title:                "Header field",
-			input:                "X-Example:Sample Value",
+			item:                 "X-Example:Sample Value",
 			expectedHeaderFields: []Field{{Name: "X-Example", Value: "Sample Value"}},
 			expectedBodyType:     EmptyBody,
 		},
 		{
 			title:                "Header field with empty value",
-			input:                "X-Example:",
+			item:                 "X-Example:",
 			expectedHeaderFields: []Field{{Name: "X-Example", Value: ""}},
 			expectedBodyType:     EmptyBody,
 		},
 		{
 			title:         "Invalid header field name",
-			input:         `Bad"header":test`,
+			item:          `Bad"header":test`,
 			shouldBeError: true,
 		},
 		{
 			title:              "URL parameter",
-			input:              "hello==world",
+			item:               "hello==world",
 			expectedParameters: []Field{{Name: "hello", Value: "world"}},
 			expectedBodyType:   EmptyBody,
 		},
 		{
 			title:              "URL parameter with empty value",
-			input:              "hello==",
+			item:               "hello==",
 			expectedParameters: []Field{{Name: "hello", Value: ""}},
 			expectedBodyType:   EmptyBody,
 		},
 		{
 			title:             "Form file field",
-			input:             "file@./hello.txt",
+			item:              "file@./hello.txt",
 			preferredBodyType: FormBody,
 			expectedBodyType:  FormBody,
 			expectedBodyFiles: []Field{{Name: "file", Value: "./hello.txt", IsFile: true}},
 		},
 		{
 			title:             "Form file field in JSON context",
-			input:             "file@./hello.txt",
+			item:              "file@./hello.txt",
 			preferredBodyType: JSONBody,
 			shouldBeError:     true,
 		},
@@ -239,14 +239,14 @@ func TestParseItem(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.title, func(t *testing.T) {
 			// Setup
-			request := Input{}
+			in := Input{}
 			preferredBodyType := JSONBody
 			if tt.preferredBodyType != EmptyBody {
 				preferredBodyType = tt.preferredBodyType
 			}
 
 			// Exercise
-			err := parseItem(tt.input, &request, preferredBodyType)
+			err := parseItem(tt.item, &in, preferredBodyType)
 			if (err != nil) != tt.shouldBeError {
 				t.Fatalf("unexpected error: shouldBeError=%v, err=%v", tt.shouldBeError, err)
 			}
@@ -255,23 +255,23 @@ func TestParseItem(t *testing.T) {
 			}
 
 			// Verify
-			if !reflect.DeepEqual(request.Body.Fields, tt.expectedBodyFields) {
-				t.Errorf("unexpected body field: expected=%+v, actual=%+v", tt.expectedBodyFields, request.Body.Fields)
+			if !reflect.DeepEqual(in.Body.Fields, tt.expectedBodyFields) {
+				t.Errorf("unexpected body field: expected=%+v, actual=%+v", tt.expectedBodyFields, in.Body.Fields)
 			}
-			if !reflect.DeepEqual(request.Body.RawJSONFields, tt.expectedBodyRawJSONFields) {
-				t.Errorf("unexpected raw JSON body field: expected=%+v, actual=%+v", tt.expectedBodyRawJSONFields, request.Body.RawJSONFields)
+			if !reflect.DeepEqual(in.Body.RawJSONFields, tt.expectedBodyRawJSONFields) {
+				t.Errorf("unexpected raw JSON body field: expected=%+v, actual=%+v", tt.expectedBodyRawJSONFields, in.Body.RawJSONFields)
 			}
-			if !reflect.DeepEqual(request.Body.Files, tt.expectedBodyFiles) {
-				t.Errorf("unexpected files: expected=%+v, actual=%+v", tt.expectedBodyFiles, request.Body.Files)
+			if !reflect.DeepEqual(in.Body.Files, tt.expectedBodyFiles) {
+				t.Errorf("unexpected files: expected=%+v, actual=%+v", tt.expectedBodyFiles, in.Body.Files)
 			}
-			if !reflect.DeepEqual(request.Header.Fields, tt.expectedHeaderFields) {
-				t.Errorf("unexpected header field: expected=%+v, actual=%+v", tt.expectedHeaderFields, request.Header.Fields)
+			if !reflect.DeepEqual(in.Header.Fields, tt.expectedHeaderFields) {
+				t.Errorf("unexpected header field: expected=%+v, actual=%+v", tt.expectedHeaderFields, in.Header.Fields)
 			}
-			if !reflect.DeepEqual(request.Parameters, tt.expectedParameters) {
-				t.Errorf("unexpected parameters: expected=%+v, actual=%+v", tt.expectedParameters, request.Parameters)
+			if !reflect.DeepEqual(in.Parameters, tt.expectedParameters) {
+				t.Errorf("unexpected parameters: expected=%+v, actual=%+v", tt.expectedParameters, in.Parameters)
 			}
-			if request.Body.BodyType != tt.expectedBodyType {
-				t.Errorf("unexpected body type: expected=%v, actual=%v", tt.expectedBodyType, request.Body.BodyType)
+			if in.Body.BodyType != tt.expectedBodyType {
+				t.Errorf("unexpected body type: expected=%v, actual=%v", tt.expectedBodyType, in.Body.BodyType)
 			}
 		})
 	}
