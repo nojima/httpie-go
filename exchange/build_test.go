@@ -7,7 +7,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"reflect"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/nojima/httpie-go/input"
@@ -267,7 +270,7 @@ func TestBuildHTTPBody_JSONBody(t *testing.T) {
 	}
 }
 
-func TestBuildHTTPBody_FormBody(t *testing.T) {
+func TestBuildHTTPBody_FormBody_URLEncoded(t *testing.T) {
 	// Setup
 	fileName := makeTempFile(t, "love & peace")
 	defer os.Remove(fileName)
@@ -294,6 +297,59 @@ func TestBuildHTTPBody_FormBody(t *testing.T) {
 	}
 	expectedContentType := "application/x-www-form-urlencoded; charset=utf-8"
 	if bodyTuple.contentType != expectedContentType {
+		t.Errorf("unexpected content type: expected=%s, actual=%s", expectedContentType, bodyTuple.contentType)
+	}
+	if bodyTuple.contentLength != int64(len(actualBody)) {
+		t.Errorf("invalid content length: len(body)=%v, actual=%v", len(actualBody), bodyTuple.contentLength)
+	}
+}
+
+func TestBuildHTTPBody_FormBody_Multipart(t *testing.T) {
+	// Setup
+	fileName := makeTempFile(t, "love & peace")
+	defer os.Remove(fileName)
+	body := input.Body{
+		BodyType: input.FormBody,
+		Fields: []input.Field{
+			{Name: "hello", Value: "🍺 world!"},
+			{Name: `"double-quoted"`, Value: "should be escaped"},
+		},
+		Files: []input.Field{
+			{Name: "file1", Value: fileName, IsFile: true},
+		},
+	}
+	in := &input.Input{Body: body}
+
+	// Exercise
+	bodyTuple, err := buildHTTPBody(in)
+	if err != nil {
+		t.Fatalf("unexpected error: err=%+v", err)
+	}
+
+	// Verify
+	expectedBody := regexp.MustCompile(strings.Join([]string{
+		`--[0-9a-z]+`,
+		regexp.QuoteMeta(`Content-Disposition: form-data; name="hello"`),
+		regexp.QuoteMeta(``),
+		regexp.QuoteMeta(`🍺 world!`),
+		`--[0-9a-z]+`,
+		regexp.QuoteMeta(`Content-Disposition: form-data; name*=utf-8''%22double-quoted%22`),
+		regexp.QuoteMeta(``),
+		regexp.QuoteMeta(`should be escaped`),
+		`--[0-9a-z]+`,
+		regexp.QuoteMeta(`Content-Disposition: form-data; name="file1"; filename="` + path.Base(fileName) + `"`),
+		regexp.QuoteMeta(``),
+		regexp.QuoteMeta(`love & peace`),
+		`--[0-9a-z]+--`,
+		regexp.QuoteMeta(``),
+	}, "\r\n"))
+
+	actualBody := readAll(t, bodyTuple.body)
+	if !expectedBody.MatchString(actualBody) {
+		t.Errorf("unexpected body: expected='%s', actual='%s'", expectedBody, actualBody)
+	}
+	expectedContentType := "multipart/form-data; "
+	if !strings.HasPrefix(bodyTuple.contentType, expectedContentType) {
 		t.Errorf("unexpected content type: expected=%s, actual=%s", expectedContentType, bodyTuple.contentType)
 	}
 	if bodyTuple.contentLength != int64(len(actualBody)) {
