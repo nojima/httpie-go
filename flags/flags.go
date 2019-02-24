@@ -50,6 +50,9 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	timeout := "30s"
 	var prettyFlag string
 
+	// Default value 20 is a bit too small for options of httpie-go.
+	getopt.HelpColumn = 22
+
 	flagSet := getopt.New()
 	flagSet.SetParameters("[METHOD] URL [REQUEST_ITEM [REQUEST_ITEM ...]]")
 	flagSet.BoolVarLong(&inputOptions.Form, "form", 'f', "serialize body in application/x-www-form-urlencoded")
