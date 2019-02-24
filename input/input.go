@@ -29,6 +29,7 @@ type Body struct {
 	BodyType      BodyType
 	Fields        []Field
 	RawJSONFields []Field // used only when BodyType == JSONBody
+	Files         []Field // used only when BodyType == FormBody
 	Raw           []byte  // used only when BodyType == RawBody
 }
 

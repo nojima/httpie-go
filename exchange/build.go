@@ -3,10 +3,15 @@ package exchange
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"net/url"
+	"os"
+	"path"
 	"strings"
 
 	"github.com/nojima/httpie-go/input"
@@ -130,6 +135,14 @@ func buildJSONBody(in *input.Input) (bodyTuple, error) {
 }
 
 func buildFormBody(in *input.Input) (bodyTuple, error) {
+	if len(in.Body.Files) > 0 {
+		return buildMultipartBody(in)
+	} else {
+		return buildURLEncodedBody(in)
+	}
+}
+
+func buildURLEncodedBody(in *input.Input) (bodyTuple, error) {
 	form := url.Values{}
 	for _, field := range in.Body.Fields {
 		value, err := resolveFieldValue(field)
@@ -144,6 +157,108 @@ func buildFormBody(in *input.Input) (bodyTuple, error) {
 		contentLength: int64(len(body)),
 		contentType:   "application/x-www-form-urlencoded; charset=utf-8",
 	}, nil
+}
+
+func buildMultipartBody(in *input.Input) (bodyTuple, error) {
+	var buffer bytes.Buffer
+	multipartWriter := multipart.NewWriter(&buffer)
+
+	for _, field := range in.Body.Fields {
+		if err := buildInlinePart(field, multipartWriter); err != nil {
+			return bodyTuple{}, err
+		}
+	}
+	for _, field := range in.Body.Files {
+		if err := buildFilePart(field, multipartWriter); err != nil {
+			return bodyTuple{}, err
+		}
+	}
+
+	multipartWriter.Close()
+
+	body := buffer.Bytes()
+	return bodyTuple{
+		body:          ioutil.NopCloser(bytes.NewReader(body)),
+		contentLength: int64(len(body)),
+		contentType:   multipartWriter.FormDataContentType(),
+	}, nil
+}
+
+func buildInlinePart(field input.Field, multipartWriter *multipart.Writer) error {
+	value, err := resolveFieldValue(field)
+	if err != nil {
+		return err
+	}
+
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition", buildContentDisposition(field.Name, ""))
+	w, err := multipartWriter.CreatePart(h)
+	if err != nil {
+		return err
+	}
+	if _, err := w.Write([]byte(value)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func buildFilePart(field input.Field, multipartWriter *multipart.Writer) error {
+	h := make(textproto.MIMEHeader)
+	filename := path.Base(field.Value)
+	h.Set("Content-Disposition", buildContentDisposition(field.Name, filename))
+	w, err := multipartWriter.CreatePart(h)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Open(field.Value)
+	if err != nil {
+		return errors.Wrapf(err, "failed to open '%s'", field.Value)
+	}
+	defer file.Close()
+
+	if _, err := io.Copy(w, file); err != nil {
+		return errors.Wrapf(err, "failed to read from '%s'", field.Value)
+	}
+	return nil
+}
+
+func buildContentDisposition(name string, filename string) string {
+	var buffer bytes.Buffer
+	buffer.WriteString("form-data")
+
+	if name != "" {
+		if needEscape(name) {
+			fmt.Fprintf(&buffer, `; name*=utf-8''%s`, url.PathEscape(name))
+		} else {
+			fmt.Fprintf(&buffer, `; name="%s"`, name)
+		}
+	}
+
+	if filename != "" {
+		if needEscape(filename) {
+			fmt.Fprintf(&buffer, `; filename*=utf-8''%s`, url.PathEscape(filename))
+		} else {
+			fmt.Fprintf(&buffer, `; filename="%s"`, filename)
+		}
+	}
+
+	return buffer.String()
+}
+
+func needEscape(s string) bool {
+	for _, c := range s {
+		if c > 127 {
+			return true
+		}
+		if c < 32 && c != '\t' {
+			return true
+		}
+		if c == '"' || c == '\\' {
+			return true
+		}
+	}
+	return false
 }
 
 func buildRawBody(in *input.Input) (bodyTuple, error) {

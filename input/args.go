@@ -60,7 +60,7 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error)
 		}
 	}
 
-	in := &Input{}
+	in := Input{}
 
 	u, err := parseURL(argURL)
 	if err != nil {
@@ -70,7 +70,7 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error)
 
 	preferredBodyType := determinePreferredBodyType(options)
 	for _, arg := range argItems {
-		if err := parseItem(arg, in, preferredBodyType); err != nil {
+		if err := parseItem(arg, preferredBodyType, &in); err != nil {
 			return nil, err
 		}
 	}
@@ -92,10 +92,10 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error)
 		}
 		in.Method = method
 	} else {
-		in.Method = guessMethod(in)
+		in.Method = guessMethod(&in)
 	}
 
-	return in, nil
+	return &in, nil
 }
 
 func determinePreferredBodyType(options *Options) BodyType {
@@ -148,20 +148,18 @@ func parseURL(s string) (*url.URL, error) {
 	return u, nil
 }
 
-func parseItem(s string, in *Input, preferredBodyType BodyType) error {
+func parseItem(s string, preferredBodyType BodyType, in *Input) error {
 	itemType, name, value := splitItem(s)
 	switch itemType {
 	case dataFieldItem:
-		if in.Body.BodyType == EmptyBody {
-			in.Body.BodyType = preferredBodyType
-		}
+		in.Body.BodyType = preferredBodyType
 		in.Body.Fields = append(in.Body.Fields, parseField(name, value))
 	case rawJSONFieldItem:
 		if !json.Valid([]byte(value)) {
 			return errors.Errorf("invalid JSON at '%s': %s", name, value)
 		}
-		if in.Body.BodyType != EmptyBody && in.Body.BodyType != JSONBody {
-			return errors.New("raw JSON field item cannot be used in non JSON body")
+		if preferredBodyType != JSONBody {
+			return errors.New("raw JSON field item cannot be used in non-JSON body")
 		}
 		in.Body.BodyType = JSONBody
 		in.Body.RawJSONFields = append(in.Body.RawJSONFields, parseField(name, value))
@@ -173,11 +171,11 @@ func parseItem(s string, in *Input, preferredBodyType BodyType) error {
 	case urlParameterItem:
 		in.Parameters = append(in.Parameters, parseField(name, value))
 	case formFileFieldItem:
-		if in.Body.BodyType != EmptyBody && in.Body.BodyType != FormBody {
-			return errors.New("form file field item cannot be used in no form body")
+		if preferredBodyType != FormBody {
+			return errors.New("form file field item cannot be used in non-form body (perhaps you meant --form?)")
 		}
 		in.Body.BodyType = FormBody
-		return errors.New("form file field item is not implemented")
+		in.Body.Files = append(in.Body.Files, Field{Name: name, Value: value, IsFile: true})
 	default:
 		return errors.Errorf("unknown request item: %s", s)
 	}
