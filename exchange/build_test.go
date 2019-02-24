@@ -2,6 +2,7 @@ package exchange
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/nojima/httpie-go/input"
+	"github.com/nojima/httpie-go/version"
 )
 
 func parseURL(t *testing.T, rawurl string) *url.URL {
@@ -63,7 +65,7 @@ func TestBuildHTTPRequest(t *testing.T) {
 	expectedHeader := http.Header{
 		"X-Foo":        []string{"fizz buzz"},
 		"Content-Type": []string{"application/json"},
-		"User-Agent":   []string{"httpie-go/0.0.0"},
+		"User-Agent":   []string{fmt.Sprintf("httpie-go/%s", version.Current())},
 		"Host":         []string{"example.com:8080"},
 	}
 	if !reflect.DeepEqual(expectedHeader, actual.Header) {
