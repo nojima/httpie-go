@@ -48,6 +48,7 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	var bodyFlag bool
 	printFlag := "\000" // "\000" is a special value that indicates user did not specified --print
 	timeout := "30s"
+	var prettyFlag string
 
 	flagSet := getopt.New()
 	flagSet.SetParameters("[METHOD] URL [REQUEST_ITEM [REQUEST_ITEM ...]]")
@@ -57,7 +58,8 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	flagSet.BoolVarLong(&headersFlag, "headers", 'h', "print only the request headers. shortcut for --print=h")
 	flagSet.BoolVarLong(&bodyFlag, "body", 'b', "print only response body. shourtcut for --print=b")
 	flagSet.BoolVarLong(&ignoreStdin, "ignore-stdin", 0, "do not attempt to read stdin")
-	flagSet.StringVarLong(&timeout, "timeout", 0, "Timeout seconds that you allow the whole operation to take")
+	flagSet.StringVarLong(&timeout, "timeout", 0, "timeout seconds that you allow the whole operation to take")
+	flagSet.StringVarLong(&prettyFlag, "pretty", 0, "controls output formatting (all, format, none)")
 	flagSet.Parse(args)
 
 	// Check stdin
@@ -84,8 +86,10 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	}
 	exchangeOptions.Timeout = d
 
-	// Color
-	outputOptions.EnableColor = terminalInfo.stdoutIsTerminal
+	// Parse --pretty
+	if err := parsePretty(prettyFlag, terminalInfo.stdoutIsTerminal, &outputOptions); err != nil {
+		return nil, nil, nil, err
+	}
 
 	optionSet := &OptionSet{
 		InputOptions:    inputOptions,
@@ -134,6 +138,28 @@ func parsePrintFlag(
 				return errors.Errorf("invalid char in --print value (must be consist of HBhb): %c", c)
 			}
 		}
+	}
+	return nil
+}
+
+func parsePretty(prettyFlag string, stdoutIsTerminal bool, outputOptions *output.Options) error {
+	switch prettyFlag {
+	case "":
+		outputOptions.EnableFormat = stdoutIsTerminal
+		outputOptions.EnableColor = stdoutIsTerminal
+	case "all":
+		outputOptions.EnableFormat = true
+		outputOptions.EnableColor = true
+	case "none":
+		outputOptions.EnableFormat = false
+		outputOptions.EnableColor = false
+	case "format":
+		outputOptions.EnableFormat = true
+		outputOptions.EnableColor = false
+	case "colors":
+		return errors.New("--pretty=colors is not implemented")
+	default:
+		return errors.Errorf("unknown value of --pretty: %s", prettyFlag)
 	}
 	return nil
 }

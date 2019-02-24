@@ -6,5 +6,6 @@ type Options struct {
 	PrintResponseHeader bool
 	PrintResponseBody   bool
 
-	EnableColor bool
+	EnableFormat bool
+	EnableColor  bool
 }

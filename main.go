@@ -47,10 +47,7 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 	// Prepare printer
 	writer := bufio.NewWriter(os.Stdout)
 	defer writer.Flush()
-	printer := output.NewPrettyPrinter(output.PrettyPrinterConfig{
-		Writer:      writer,
-		EnableColor: outputOptions.EnableColor,
-	})
+	printer := output.NewPrinter(writer, outputOptions)
 
 	// Build HTTP request
 	request, err := exchange.BuildHTTPRequest(in)

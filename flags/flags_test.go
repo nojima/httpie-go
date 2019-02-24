@@ -30,6 +30,7 @@ func TestParse(t *testing.T) {
 			PrintResponseHeader: true,
 			PrintResponseBody:   true,
 			EnableColor:         true,
+			EnableFormat:        true,
 		},
 	}
 	if !reflect.DeepEqual(expectedOptionSet, optionSet) {
