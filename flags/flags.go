@@ -43,6 +43,9 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	outputOptions := output.Options{}
 	exchangeOptions := exchange.Options{}
 	var ignoreStdin bool
+	var verboseFlag bool
+	var headersFlag bool
+	var bodyFlag bool
 	printFlag := "\000" // "\000" is a special value that indicates user did not specified --print
 	timeout := "30s"
 
@@ -50,6 +53,9 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	flagSet.SetParameters("[METHOD] URL [REQUEST_ITEM [REQUEST_ITEM ...]]")
 	flagSet.BoolVarLong(&inputOptions.Form, "form", 'f', "serialize body in application/x-www-form-urlencoded")
 	flagSet.StringVarLong(&printFlag, "print", 'p', "specifies what the output should contain (HBhb)")
+	flagSet.BoolVarLong(&verboseFlag, "verbose", 'v', "print the request as well as the response. shortcut for --print=HBhb")
+	flagSet.BoolVarLong(&headersFlag, "headers", 'h', "print only the request headers. shortcut for --print=h")
+	flagSet.BoolVarLong(&bodyFlag, "body", 'b', "print only response body. shourtcut for --print=b")
 	flagSet.BoolVarLong(&ignoreStdin, "ignore-stdin", 0, "do not attempt to read stdin")
 	flagSet.StringVarLong(&timeout, "timeout", 0, "Timeout seconds that you allow the whole operation to take")
 	flagSet.Parse(args)
@@ -60,7 +66,14 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	}
 
 	// Parse --print
-	if err := parsePrintFlag(printFlag, &outputOptions, terminalInfo); err != nil {
+	if err := parsePrintFlag(
+		printFlag,
+		verboseFlag,
+		headersFlag,
+		bodyFlag,
+		terminalInfo.stdoutIsTerminal,
+		&outputOptions,
+	); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -82,16 +95,31 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	return flagSet.Args(), flagSet, optionSet, nil
 }
 
-func parsePrintFlag(printFlag string, outputOptions *output.Options, terminalInfo terminalInfo) error {
-	if printFlag == "\000" {
-		// --print is not specified
-		if terminalInfo.stdoutIsTerminal {
+func parsePrintFlag(
+	printFlag string,
+	verboseFlag bool,
+	headersFlag bool,
+	bodyFlag bool,
+	stdoutIsTerminal bool,
+	outputOptions *output.Options,
+) error {
+	if printFlag == "\000" { // --print is not specified
+		if headersFlag {
+			outputOptions.PrintResponseHeader = true
+		} else if bodyFlag {
+			outputOptions.PrintResponseBody = true
+		} else if verboseFlag {
+			outputOptions.PrintRequestBody = true
+			outputOptions.PrintRequestHeader = true
+			outputOptions.PrintResponseHeader = true
+			outputOptions.PrintResponseBody = true
+		} else if stdoutIsTerminal {
 			outputOptions.PrintResponseHeader = true
 			outputOptions.PrintResponseBody = true
 		} else {
 			outputOptions.PrintResponseBody = true
 		}
-	} else {
+	} else { // --print is specified
 		for _, c := range printFlag {
 			switch c {
 			case 'H':
@@ -103,7 +131,7 @@ func parsePrintFlag(printFlag string, outputOptions *output.Options, terminalInf
 			case 'b':
 				outputOptions.PrintResponseBody = true
 			default:
-				return errors.Errorf("Invalid char in --print value (must be consist of HBhb): %c", c)
+				return errors.Errorf("invalid char in --print value (must be consist of HBhb): %c", c)
 			}
 		}
 	}
