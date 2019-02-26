@@ -7,8 +7,7 @@ jobs:
       - checkout
       - run:
           name: Check code format
-          command: |
-            diff -u <(echo -n) <(gofmt -d ./)
+          command: diff -u <(echo -n) <(gofmt -d ./)
       - run:
           name: Build
           working_directory: cmd/hg
