@@ -42,7 +42,7 @@ func newUsageError(message string) error {
 
 type state struct {
 	preferredBodyType BodyType
-	stdinConsumed bool
+	stdinConsumed     bool
 }
 
 func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error) {
@@ -198,7 +198,7 @@ func parseItem(s string, stdin io.Reader, state *state, in *Input) error {
 			return errors.New("form file field item cannot be used in non-form body (perhaps you meant --form?)")
 		}
 		in.Body.BodyType = FormBody
-		field, err := parseField(name, "@" + value, stdin, state)
+		field, err := parseField(name, "@"+value, stdin, state)
 		if err != nil {
 			return err
 		}
