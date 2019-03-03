@@ -74,7 +74,11 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error)
 	}
 	in.URL = u
 
-	state.preferredBodyType = determinePreferredBodyType(options)
+	state.preferredBodyType, err = determinePreferredBodyType(options)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, arg := range argItems {
 		if err := parseItem(arg, stdin, &state, &in); err != nil {
 			return nil, err
@@ -105,11 +109,14 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error)
 	return &in, nil
 }
 
-func determinePreferredBodyType(options *Options) BodyType {
+func determinePreferredBodyType(options *Options) (BodyType, error) {
+	if options.JSON && options.Form {
+		return EmptyBody, errors.New("You cannot specify both of --json and --form")
+	}
 	if options.Form {
-		return FormBody
+		return FormBody, nil
 	} else {
-		return JSONBody
+		return JSONBody, nil
 	}
 }
 

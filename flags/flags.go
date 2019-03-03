@@ -57,8 +57,9 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	getopt.HelpColumn = 22
 
 	flagSet := getopt.New()
-	flagSet.SetParameters("[METHOD] URL [REQUEST_ITEM [REQUEST_ITEM ...]]")
-	flagSet.BoolVarLong(&inputOptions.Form, "form", 'f', "serialize body in application/x-www-form-urlencoded")
+	flagSet.SetParameters("[METHOD] URL [ITEM [ITEM ...]]")
+	flagSet.BoolVarLong(&inputOptions.JSON, "json", 'j', "data items are serialized as JSON (default)")
+	flagSet.BoolVarLong(&inputOptions.Form, "form", 'f', "data items are serialized as form fields")
 	flagSet.StringVarLong(&printFlag, "print", 'p', "specifies what the output should contain (HBhb)")
 	flagSet.BoolVarLong(&verboseFlag, "verbose", 'v', "print the request as well as the response. shortcut for --print=HBhb")
 	flagSet.BoolVarLong(&headersFlag, "headers", 'h', "print only the request headers. shortcut for --print=h")
