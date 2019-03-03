@@ -5,12 +5,17 @@ import (
 )
 
 func BuildHTTPClient(options *Options) (*http.Client, error) {
-	client := http.Client{
+	checkRedirect := func(req *http.Request, via []*http.Request) error {
 		// Do not follow redirects
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-		Timeout: options.Timeout,
+		return http.ErrUseLastResponse
+	}
+	if options.FollowRedirects {
+		checkRedirect = nil
+	}
+
+	client := http.Client{
+		CheckRedirect: checkRedirect,
+		Timeout:       options.Timeout,
 	}
 	return &client, nil
 }
