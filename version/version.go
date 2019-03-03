@@ -15,5 +15,5 @@ func (v *Version) String() string {
 
 // Current returns current version of httpie-go
 func Current() *Version {
-	return &Version{major: 0, minor: 3, patch: 0}
+	return &Version{major: 0, minor: 4, patch: 0}
 }
