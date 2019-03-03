@@ -56,6 +56,7 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	var authFlag string
 	var prettyFlag string
 	var versionFlag bool
+	var licenseFlag bool
 
 	// Default value 20 is a bit too small for options of httpie-go.
 	getopt.HelpColumn = 22
@@ -74,11 +75,18 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	flagSet.StringVarLong(&prettyFlag, "pretty", 0, "controls output formatting (all, format, none)")
 	flagSet.BoolVarLong(&exchangeOptions.FollowRedirects, "follow", 'F', "follow 30x Location redirects")
 	flagSet.BoolVarLong(&versionFlag, "version", 0, "print version and exit")
+	flagSet.BoolVarLong(&licenseFlag, "license", 0, "print license information and exit")
 	flagSet.Parse(args)
 
 	// Check --version
 	if versionFlag {
 		fmt.Fprintf(os.Stderr, "httpie-go %s\n", version.Current())
+		os.Exit(0)
+	}
+
+	// Check --license
+	if licenseFlag {
+		fmt.Fprintf(os.Stderr, "%s", version.Licenses)
 		os.Exit(0)
 	}
 
