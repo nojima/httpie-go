@@ -3,6 +3,9 @@ EXE_NAME=hg
 build:
 	go build -o $(EXE_NAME) ./cmd/hg
 
+fmt:
+	go fmt ./...
+
 test:
 	go test ./...
 
