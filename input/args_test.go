@@ -81,7 +81,7 @@ func TestParseArgs(t *testing.T) {
 			},
 		},
 		{
-			title: "Read from stdin",
+			title: "Read body from stdin",
 			args:  []string{"example.com"},
 			stdin: "Hello, World!",
 			options: &Options{
@@ -97,13 +97,31 @@ func TestParseArgs(t *testing.T) {
 			},
 		},
 		{
-			title: "stdin and request items mixed",
+			title: "Stdin and request items mixed",
 			args:  []string{"example.com", "foo=bar"},
 			stdin: "Hello, World!",
 			options: &Options{
 				ReadStdin: true,
 			},
 			shouldBeError: true,
+		},
+		{
+			title: "Read request item from stdin",
+			args:  []string{"example.com", "hello=@-"},
+			stdin: "Hello, World!",
+			options: &Options{
+				ReadStdin: true,
+			},
+			expectedInput: &Input{
+				Method: Method("POST"),
+				URL:    mustURL("http://example.com/"),
+				Body: Body{
+					BodyType: JSONBody,
+					Fields: []Field{
+						{Name: "hello", Value: "Hello, World!", IsFile: false},
+					},
+				},
+			},
 		},
 	}
 	for _, tt := range testCases {
@@ -135,6 +153,7 @@ func TestParseItem(t *testing.T) {
 	testCases := []struct {
 		title                     string
 		item                      string
+		stdin                     string
 		preferredBodyType         BodyType
 		expectedBodyFields        []Field
 		expectedBodyRawJSONFields []Field
@@ -174,6 +193,13 @@ func TestParseItem(t *testing.T) {
 			title:              "Data field from file",
 			item:               "hello=@world.txt",
 			expectedBodyFields: []Field{{Name: "hello", Value: "world.txt", IsFile: true}},
+			expectedBodyType:   JSONBody,
+		},
+		{
+			title:              "Data field from stdin",
+			item:               "hello=@-",
+			stdin:              "Hello, World!",
+			expectedBodyFields: []Field{{Name: "hello", Value: "Hello, World!", IsFile: false}},
 			expectedBodyType:   JSONBody,
 		},
 		{
@@ -244,9 +270,11 @@ func TestParseItem(t *testing.T) {
 			if tt.preferredBodyType != EmptyBody {
 				preferredBodyType = tt.preferredBodyType
 			}
+			state := state{preferredBodyType: preferredBodyType}
+			stdin := strings.NewReader(tt.stdin)
 
 			// Exercise
-			err := parseItem(tt.item, preferredBodyType, &in)
+			err := parseItem(tt.item, stdin, &state, &in)
 			if (err != nil) != tt.shouldBeError {
 				t.Fatalf("unexpected error: shouldBeError=%v, err=%v", tt.shouldBeError, err)
 			}

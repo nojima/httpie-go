@@ -40,6 +40,11 @@ func newUsageError(message string) error {
 	return errors.WithStack(&u)
 }
 
+type state struct {
+	preferredBodyType BodyType
+	stdinConsumed bool
+}
+
 func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error) {
 	var argMethod string
 	var argURL string
@@ -61,6 +66,7 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error)
 	}
 
 	in := Input{}
+	state := state{}
 
 	u, err := parseURL(argURL)
 	if err != nil {
@@ -68,13 +74,13 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error)
 	}
 	in.URL = u
 
-	preferredBodyType := determinePreferredBodyType(options)
+	state.preferredBodyType = determinePreferredBodyType(options)
 	for _, arg := range argItems {
-		if err := parseItem(arg, preferredBodyType, &in); err != nil {
+		if err := parseItem(arg, stdin, &state, &in); err != nil {
 			return nil, err
 		}
 	}
-	if options.ReadStdin {
+	if options.ReadStdin && !state.stdinConsumed {
 		if in.Body.BodyType != EmptyBody {
 			return nil, errors.New("request body (from stdin) and request item (key=value) cannot be mixed")
 		}
@@ -83,6 +89,7 @@ func ParseArgs(args []string, stdin io.Reader, options *Options) (*Input, error)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to read stdin")
 		}
+		state.stdinConsumed = true
 	}
 
 	if argMethod != "" {
@@ -148,34 +155,54 @@ func parseURL(s string) (*url.URL, error) {
 	return u, nil
 }
 
-func parseItem(s string, preferredBodyType BodyType, in *Input) error {
+func parseItem(s string, stdin io.Reader, state *state, in *Input) error {
 	itemType, name, value := splitItem(s)
 	switch itemType {
 	case dataFieldItem:
-		in.Body.BodyType = preferredBodyType
-		in.Body.Fields = append(in.Body.Fields, parseField(name, value))
-	case rawJSONFieldItem:
-		if !json.Valid([]byte(value)) {
-			return errors.Errorf("invalid JSON at '%s': %s", name, value)
+		in.Body.BodyType = state.preferredBodyType
+		field, err := parseField(name, value, stdin, state)
+		if err != nil {
+			return err
 		}
-		if preferredBodyType != JSONBody {
+		in.Body.Fields = append(in.Body.Fields, field)
+	case rawJSONFieldItem:
+		if state.preferredBodyType != JSONBody {
 			return errors.New("raw JSON field item cannot be used in non-JSON body")
 		}
 		in.Body.BodyType = JSONBody
-		in.Body.RawJSONFields = append(in.Body.RawJSONFields, parseField(name, value))
+		field, err := parseField(name, value, stdin, state)
+		if err != nil {
+			return err
+		}
+		if !json.Valid([]byte(field.Value)) {
+			return errors.Errorf("invalid JSON at '%s': %s", name, field.Value)
+		}
+		in.Body.RawJSONFields = append(in.Body.RawJSONFields, field)
 	case httpHeaderItem:
 		if !isValidHeaderFieldName(name) {
 			return errors.Errorf("invalid header field name: %s", name)
 		}
-		in.Header.Fields = append(in.Header.Fields, parseField(name, value))
+		field, err := parseField(name, value, stdin, state)
+		if err != nil {
+			return err
+		}
+		in.Header.Fields = append(in.Header.Fields, field)
 	case urlParameterItem:
-		in.Parameters = append(in.Parameters, parseField(name, value))
+		field, err := parseField(name, value, stdin, state)
+		if err != nil {
+			return err
+		}
+		in.Parameters = append(in.Parameters, field)
 	case formFileFieldItem:
-		if preferredBodyType != FormBody {
+		if state.preferredBodyType != FormBody {
 			return errors.New("form file field item cannot be used in non-form body (perhaps you meant --form?)")
 		}
 		in.Body.BodyType = FormBody
-		in.Body.Files = append(in.Body.Files, Field{Name: name, Value: value, IsFile: true})
+		field, err := parseField(name, "@" + value, stdin, state)
+		if err != nil {
+			return err
+		}
+		in.Body.Files = append(in.Body.Files, field)
 	default:
 		return errors.Errorf("unknown request item: %s", s)
 	}
@@ -208,11 +235,20 @@ func isValidHeaderFieldName(s string) bool {
 	return reHeaderFieldName.MatchString(s)
 }
 
-func parseField(name, value string) Field {
+func parseField(name, value string, stdin io.Reader, state *state) (Field, error) {
 	// TODO: handle escaped "@"
 	if strings.HasPrefix(value, "@") {
-		return Field{Name: name, Value: value[1:], IsFile: true}
+		if value[1:] == "-" {
+			b, err := ioutil.ReadAll(stdin)
+			if err != nil {
+				return Field{}, errors.Wrapf(err, "reading stdin for '%s'", name)
+			}
+			state.stdinConsumed = true
+			return Field{Name: name, Value: string(b), IsFile: false}, nil
+		} else {
+			return Field{Name: name, Value: value[1:], IsFile: true}, nil
+		}
 	} else {
-		return Field{Name: name, Value: value, IsFile: false}
+		return Field{Name: name, Value: value, IsFile: false}, nil
 	}
 }

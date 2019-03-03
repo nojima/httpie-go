@@ -308,7 +308,7 @@ func TestBuildHTTPBody_FormBody_URLEncoded(t *testing.T) {
 
 func TestBuildHTTPBody_FormBody_Multipart(t *testing.T) {
 	// Setup
-	fileName := makeTempFile(t, "love & peace")
+	fileName := makeTempFile(t, "🍣 & 🍺")
 	defer os.Remove(fileName)
 	body := input.Body{
 		BodyType: input.FormBody,
@@ -318,6 +318,7 @@ func TestBuildHTTPBody_FormBody_Multipart(t *testing.T) {
 		},
 		Files: []input.Field{
 			{Name: "file1", Value: fileName, IsFile: true},
+			{Name: "file2", Value: "From STDIN", IsFile: false},
 		},
 	}
 	in := &input.Input{Body: body}
@@ -341,7 +342,11 @@ func TestBuildHTTPBody_FormBody_Multipart(t *testing.T) {
 		`--[0-9a-z]+`,
 		regexp.QuoteMeta(`Content-Disposition: form-data; name="file1"; filename="` + path.Base(fileName) + `"`),
 		regexp.QuoteMeta(``),
-		regexp.QuoteMeta(`love & peace`),
+		regexp.QuoteMeta(`🍣 & 🍺`),
+		`--[0-9a-z]+`,
+		regexp.QuoteMeta(`Content-Disposition: form-data; name="file2"`),
+		regexp.QuoteMeta(``),
+		regexp.QuoteMeta(`From STDIN`),
 		`--[0-9a-z]+--`,
 		regexp.QuoteMeta(``),
 	}, "\r\n"))
