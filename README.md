@@ -11,5 +11,5 @@ Currently under development...
 ## How to build
 
 ```
-go build ./cmd/hg
+make
 ```

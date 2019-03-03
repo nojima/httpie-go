@@ -205,21 +205,32 @@ func buildInlinePart(field input.Field, multipartWriter *multipart.Writer) error
 
 func buildFilePart(field input.Field, multipartWriter *multipart.Writer) error {
 	h := make(textproto.MIMEHeader)
-	filename := path.Base(field.Value)
+
+	var filename string
+	if field.IsFile {
+		filename = path.Base(field.Value)
+	}
 	h.Set("Content-Disposition", buildContentDisposition(field.Name, filename))
+
 	w, err := multipartWriter.CreatePart(h)
 	if err != nil {
 		return err
 	}
 
-	file, err := os.Open(field.Value)
-	if err != nil {
-		return errors.Wrapf(err, "failed to open '%s'", field.Value)
-	}
-	defer file.Close()
+	if field.IsFile {
+		file, err := os.Open(field.Value)
+		if err != nil {
+			return errors.Wrapf(err, "failed to open '%s'", field.Value)
+		}
+		defer file.Close()
 
-	if _, err := io.Copy(w, file); err != nil {
-		return errors.Wrapf(err, "failed to read from '%s'", field.Value)
+		if _, err := io.Copy(w, file); err != nil {
+			return errors.Wrapf(err, "failed to read from '%s'", field.Value)
+		}
+	} else {
+		if _, err := io.Copy(w, strings.NewReader(field.Value)); err != nil {
+			return errors.Wrap(err, "failed to write to multipart writer")
+		}
 	}
 	return nil
 }
@@ -272,16 +283,11 @@ func buildRawBody(in *input.Input) (bodyTuple, error) {
 
 func resolveFieldValue(field input.Field) (string, error) {
 	if field.IsFile {
-		if strings.HasPrefix(field.Value, "-") {
-			// TODO
-			return "", errors.New("reading field value from STDIN is not implemented")
-		} else {
-			data, err := ioutil.ReadFile(field.Value)
-			if err != nil {
-				return "", errors.Wrapf(err, "reading field value of '%s'", field.Name)
-			}
-			return string(data), nil
+		data, err := ioutil.ReadFile(field.Value)
+		if err != nil {
+			return "", errors.Wrapf(err, "reading field value of '%s'", field.Name)
 		}
+		return string(data), nil
 	} else {
 		return field.Value, nil
 	}
