@@ -19,6 +19,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+type bodyTuple struct {
+	body          io.ReadCloser
+	getBody       func() (io.ReadCloser, error)
+	contentLength int64
+	contentType   string
+}
+
 func BuildHTTPRequest(in *input.Input) (*http.Request, error) {
 	u, err := buildURL(in)
 	if err != nil {
@@ -48,6 +55,7 @@ func BuildHTTPRequest(in *input.Input) (*http.Request, error) {
 		Header:        header,
 		Host:          header.Get("Host"),
 		Body:          bodyTuple.body,
+		GetBody:       bodyTuple.getBody,
 		ContentLength: bodyTuple.contentLength,
 	}
 	return &r, nil
@@ -81,12 +89,6 @@ func buildHTTPHeader(in *input.Input) (http.Header, error) {
 		header.Add(field.Name, value)
 	}
 	return header, nil
-}
-
-type bodyTuple struct {
-	body          io.ReadCloser
-	contentLength int64
-	contentType   string
 }
 
 func buildHTTPBody(in *input.Input) (bodyTuple, error) {
@@ -129,7 +131,10 @@ func buildJSONBody(in *input.Input) (bodyTuple, error) {
 		return bodyTuple{}, errors.Wrap(err, "marshaling JSON of HTTP body")
 	}
 	return bodyTuple{
-		body:          ioutil.NopCloser(bytes.NewReader(body)),
+		body: ioutil.NopCloser(bytes.NewReader(body)),
+		getBody: func() (io.ReadCloser, error) {
+			return ioutil.NopCloser(bytes.NewReader(body)), nil
+		},
 		contentLength: int64(len(body)),
 		contentType:   "application/json",
 	}, nil
@@ -154,7 +159,10 @@ func buildURLEncodedBody(in *input.Input) (bodyTuple, error) {
 	}
 	body := form.Encode()
 	return bodyTuple{
-		body:          ioutil.NopCloser(strings.NewReader(body)),
+		body: ioutil.NopCloser(strings.NewReader(body)),
+		getBody: func() (io.ReadCloser, error) {
+			return ioutil.NopCloser(strings.NewReader(body)), nil
+		},
 		contentLength: int64(len(body)),
 		contentType:   "application/x-www-form-urlencoded; charset=utf-8",
 	}, nil
@@ -179,7 +187,10 @@ func buildMultipartBody(in *input.Input) (bodyTuple, error) {
 
 	body := buffer.Bytes()
 	return bodyTuple{
-		body:          ioutil.NopCloser(bytes.NewReader(body)),
+		body: ioutil.NopCloser(bytes.NewReader(body)),
+		getBody: func() (io.ReadCloser, error) {
+			return ioutil.NopCloser(bytes.NewReader(body)), nil
+		},
 		contentLength: int64(len(body)),
 		contentType:   multipartWriter.FormDataContentType(),
 	}, nil
@@ -275,7 +286,10 @@ func needEscape(s string) bool {
 
 func buildRawBody(in *input.Input) (bodyTuple, error) {
 	return bodyTuple{
-		body:          ioutil.NopCloser(bytes.NewReader(in.Body.Raw)),
+		body: ioutil.NopCloser(bytes.NewReader(in.Body.Raw)),
+		getBody: func() (io.ReadCloser, error) {
+			return ioutil.NopCloser(bytes.NewReader(in.Body.Raw)), nil
+		},
 		contentLength: int64(len(in.Body.Raw)),
 		contentType:   "application/json",
 	}, nil

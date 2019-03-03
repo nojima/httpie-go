@@ -3,5 +3,6 @@ package exchange
 import "time"
 
 type Options struct {
-	Timeout time.Duration
+	Timeout         time.Duration
+	FollowRedirects bool
 }
