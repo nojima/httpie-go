@@ -47,9 +47,16 @@ func TestBuildHTTPRequest(t *testing.T) {
 			},
 		},
 	}
+	options := Options{
+		Auth: AuthOptions{
+			Enabled:  true,
+			UserName: "alice",
+			Password: "open sesame",
+		},
+	}
 
 	// Exercise
-	actual, err := BuildHTTPRequest(in)
+	actual, err := BuildHTTPRequest(in, &options)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%v", err)
 	}
@@ -63,10 +70,11 @@ func TestBuildHTTPRequest(t *testing.T) {
 		t.Errorf("unexpected URL: expected=%v, actual=%v", expectedURL, actual.URL)
 	}
 	expectedHeader := http.Header{
-		"X-Foo":        []string{"fizz buzz"},
-		"Content-Type": []string{"application/json"},
-		"User-Agent":   []string{fmt.Sprintf("httpie-go/%s", version.Current())},
-		"Host":         []string{"example.com:8080"},
+		"X-Foo":         []string{"fizz buzz"},
+		"Content-Type":  []string{"application/json"},
+		"User-Agent":    []string{fmt.Sprintf("httpie-go/%s", version.Current())},
+		"Host":          []string{"example.com:8080"},
+		"Authorization": []string{"Basic YWxpY2U6b3BlbiBzZXNhbWU="},
 	}
 	if !reflect.DeepEqual(expectedHeader, actual.Header) {
 		t.Errorf("unexpected header: expected=%v, actual=%v", expectedHeader, actual.Header)

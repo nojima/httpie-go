@@ -50,7 +50,7 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 	printer := output.NewPrinter(writer, outputOptions)
 
 	// Build HTTP request
-	request, err := exchange.BuildHTTPRequest(in)
+	request, err := exchange.BuildHTTPRequest(in, exchangeOptions)
 	if err != nil {
 		return err
 	}
