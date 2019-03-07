@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/mattn/go-isatty"
@@ -50,6 +51,7 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	var bodyFlag bool
 	printFlag := "\000" // "\000" is a special value that indicates user did not specified --print
 	timeout := "30s"
+	var authFlag string
 	var prettyFlag string
 	var versionFlag bool
 
@@ -66,6 +68,7 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	flagSet.BoolVarLong(&bodyFlag, "body", 'b', "print only response body. shourtcut for --print=b")
 	flagSet.BoolVarLong(&ignoreStdin, "ignore-stdin", 0, "do not attempt to read stdin")
 	flagSet.StringVarLong(&timeout, "timeout", 0, "timeout seconds that you allow the whole operation to take")
+	flagSet.StringVarLong(&authFlag, "auth", 'a', "colon-separated username and password for authentication")
 	flagSet.StringVarLong(&prettyFlag, "pretty", 0, "controls output formatting (all, format, none)")
 	flagSet.BoolVarLong(&exchangeOptions.FollowRedirects, "follow", 'F', "follow 30x Location redirects")
 	flagSet.BoolVarLong(&versionFlag, "version", 0, "print version and exit")
@@ -104,6 +107,13 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	// Parse --pretty
 	if err := parsePretty(prettyFlag, terminalInfo.stdoutIsTerminal, &outputOptions); err != nil {
 		return nil, nil, nil, err
+	}
+
+	if authFlag != "" {
+		username, password := parseAuth(authFlag)
+		exchangeOptions.Auth.Enabled = true
+		exchangeOptions.Auth.UserName = username
+		exchangeOptions.Auth.Password = password
 	}
 
 	optionSet := &OptionSet{
@@ -188,4 +198,13 @@ func parseDurationOrSeconds(timeout string) (time.Duration, error) {
 		return time.Duration(0), errors.Errorf("Value of --timeout must be a number or duration string: %v", timeout)
 	}
 	return d, nil
+}
+
+func parseAuth(authFlag string) (string, string) {
+	colonIndex := strings.Index(authFlag, ":")
+	if colonIndex == -1 {
+		return authFlag, ""
+	}
+	return authFlag[:colonIndex], authFlag[colonIndex+1:]
+
 }

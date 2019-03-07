@@ -26,7 +26,7 @@ type bodyTuple struct {
 	contentType   string
 }
 
-func BuildHTTPRequest(in *input.Input) (*http.Request, error) {
+func BuildHTTPRequest(in *input.Input, options *Options) (*http.Request, error) {
 	u, err := buildURL(in)
 	if err != nil {
 		return nil, err
@@ -58,6 +58,11 @@ func BuildHTTPRequest(in *input.Input) (*http.Request, error) {
 		GetBody:       bodyTuple.getBody,
 		ContentLength: bodyTuple.contentLength,
 	}
+
+	if options.Auth.Enabled {
+		r.SetBasicAuth(options.Auth.UserName, options.Auth.Password)
+	}
+
 	return &r, nil
 }
 
