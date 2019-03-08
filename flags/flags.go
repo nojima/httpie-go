@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/mattn/go-isatty"
@@ -114,7 +115,7 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	if authFlag != "" {
 		username, password := parseAuth(authFlag)
 
-		if password == nil && terminalInfo.stdinIsTerminal {
+		if password == nil {
 			p, err := askPassword()
 			if err != nil {
 				return nil, nil, nil, err
@@ -221,8 +222,21 @@ func parseAuth(authFlag string) (string, *string) {
 }
 
 func askPassword() (string, error) {
+	// TODO: platform dependent code
+	var fd int
+	if terminal.IsTerminal(syscall.Stdin) {
+		fd = syscall.Stdin
+	} else {
+		tty, err := os.Open("/dev/tty")
+		if err != nil {
+			return "", errors.Wrap(err, "failed to allocate terminal")
+		}
+		defer tty.Close()
+		fd = int(tty.Fd())
+	}
+
 	fmt.Fprintf(os.Stderr, "Password: ")
-	password, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	password, err := terminal.ReadPassword(fd)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to read password from terminal")
 	}
