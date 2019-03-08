@@ -15,6 +15,7 @@ import (
 	"github.com/nojima/httpie-go/version"
 	"github.com/pborman/getopt"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var reNumber = regexp.MustCompile(`^[0-9.]+$`)
@@ -109,11 +110,21 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 		return nil, nil, nil, err
 	}
 
+	// Parse --auth
 	if authFlag != "" {
 		username, password := parseAuth(authFlag)
+
+		if password == nil && terminalInfo.stdinIsTerminal {
+			p, err := askPassword()
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			password = &p
+		}
+
 		exchangeOptions.Auth.Enabled = true
 		exchangeOptions.Auth.UserName = username
-		exchangeOptions.Auth.Password = password
+		exchangeOptions.Auth.Password = *password
 	}
 
 	optionSet := &OptionSet{
@@ -200,11 +211,21 @@ func parseDurationOrSeconds(timeout string) (time.Duration, error) {
 	return d, nil
 }
 
-func parseAuth(authFlag string) (string, string) {
+func parseAuth(authFlag string) (string, *string) {
 	colonIndex := strings.Index(authFlag, ":")
 	if colonIndex == -1 {
-		return authFlag, ""
+		return authFlag, nil
 	}
-	return authFlag[:colonIndex], authFlag[colonIndex+1:]
+	password := authFlag[colonIndex+1:]
+	return authFlag[:colonIndex], &password
+}
 
+func askPassword() (string, error) {
+	fmt.Fprintf(os.Stderr, "Password: ")
+	password, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		return "", errors.Wrap(err, "failed to read password from terminal")
+	}
+	fmt.Fprintln(os.Stderr)
+	return string(password), nil
 }
