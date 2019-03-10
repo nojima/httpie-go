@@ -10,11 +10,10 @@ jobs:
           command: diff -u <(echo -n) <(gofmt -d ./)
       - run:
           name: Build
-          working_directory: cmd/hg
-          command: go build
+          command: make
       - run:
           name: Test
-          command: go test ./...
+          command: make test
 workflows:
   version: 2
   build_and_test:
