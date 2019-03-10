@@ -23,8 +23,10 @@ jobs:
             tar -c -z -f httpie-go_darwin_amd64.tgz ./hg
       - store_artifacts:
           path: ~/project/httpie-go_linux_amd64.tgz
+          destination: bin/httpie-go_linux_amd64.tgz
       - store_artifacts:
           path: ~/project/httpie-go_darwin_amd64.tgz
+          destination: bin/httpie-go_darwin_amd64.tgz
 workflows:
   version: 2
   build_and_test:
