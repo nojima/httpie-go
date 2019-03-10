@@ -11,22 +11,20 @@ jobs:
       - run:
           name: Build (linux)
           command: |
-            make
-            tar -c -z -f httpie-go_linux_amd64.tgz ./hg
+            make EXE_NAME=httpie-go_linux_amd64
       - run:
           name: Test
           command: make test
       - run:
           name: Build (mac)
           command: |
-            GOOS=darwin make
-            tar -c -z -f httpie-go_darwin_amd64.tgz ./hg
+            GOOS=darwin make EXE_NAME=httpie-go_darwin_amd64
       - store_artifacts:
-          path: ~/project/httpie-go_linux_amd64.tgz
-          destination: bin/httpie-go_linux_amd64.tgz
+          path: ~/project/httpie-go_linux_amd64
+          destination: bin/httpie-go_linux_amd64
       - store_artifacts:
-          path: ~/project/httpie-go_darwin_amd64.tgz
-          destination: bin/httpie-go_darwin_amd64.tgz
+          path: ~/project/httpie-go_darwin_amd64
+          destination: bin/httpie-go_darwin_amd64
 workflows:
   version: 2
   build_and_test:
