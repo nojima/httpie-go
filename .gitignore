@@ -12,5 +12,5 @@
 *.out
 
 # Binaries
-/cmd/hg/hg
-/hg
+/cmd/ht/ht
+/ht
