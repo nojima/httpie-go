@@ -1,7 +1,7 @@
-EXE_NAME=hg
+EXE_NAME=ht
 
 build:
-	go build -o $(EXE_NAME) ./cmd/hg
+	go build -o $(EXE_NAME) ./cmd/ht
 
 fmt:
 	go fmt ./...
