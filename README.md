@@ -9,7 +9,7 @@ Requests can be issued with fewer types compared to `curl`.
 Responses are displayed with syntax highlighting.
 
 httpie-go is a clone of [httpie](https://httpie.org/).
-Since httpie-go is written in Go, it is single a single binary and does not require a heavy runtime.
+Since httpie-go is written in Go, it is a single binary and does not require a heavy runtime.
 
 ## Examples
 
