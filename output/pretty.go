@@ -40,14 +40,14 @@ type HeaderPalette struct {
 }
 
 var defaultHeaderPalette = HeaderPalette{
-	Method:              aurora.GrayFg | aurora.BoldFm,
+	Method:              aurora.WhiteFg | aurora.BoldFm,
 	URL:                 aurora.GreenFg | aurora.BoldFm,
 	Proto:               aurora.BlueFg,
 	SuccessfulStatus:    aurora.GreenFg | aurora.BoldFm,
-	NonSuccessfulStatus: aurora.BrownFg | aurora.BoldFm,
-	FieldName:           aurora.GrayFg,
+	NonSuccessfulStatus: aurora.YellowFg | aurora.BoldFm,
+	FieldName:           aurora.WhiteFg,
 	FieldValue:          aurora.CyanFg,
-	FieldSeparator:      aurora.GrayFg,
+	FieldSeparator:      aurora.WhiteFg,
 }
 
 type JSONPalette struct {
@@ -61,11 +61,11 @@ type JSONPalette struct {
 
 var defaultJSONPalette = JSONPalette{
 	Key:       aurora.BlueFg,
-	String:    aurora.BrownFg,
+	String:    aurora.YellowFg,
 	Number:    aurora.CyanFg,
 	Boolean:   aurora.RedFg | aurora.BoldFm,
 	Null:      aurora.RedFg | aurora.BoldFm,
-	Delimiter: aurora.GrayFg,
+	Delimiter: aurora.WhiteFg,
 }
 
 func NewPrettyPrinter(config PrettyPrinterConfig) Printer {
