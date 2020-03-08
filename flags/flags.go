@@ -6,7 +6,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/mattn/go-isatty"
@@ -16,7 +15,6 @@ import (
 	"github.com/nojima/httpie-go/version"
 	"github.com/pborman/getopt"
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 var reNumber = regexp.MustCompile(`^[0-9.]+$`)
@@ -227,27 +225,4 @@ func parseAuth(authFlag string) (string, *string) {
 	}
 	password := authFlag[colonIndex+1:]
 	return authFlag[:colonIndex], &password
-}
-
-func askPassword() (string, error) {
-	// TODO: platform dependent code
-	var fd int
-	if terminal.IsTerminal(syscall.Stdin) {
-		fd = syscall.Stdin
-	} else {
-		tty, err := os.Open("/dev/tty")
-		if err != nil {
-			return "", errors.Wrap(err, "failed to allocate terminal")
-		}
-		defer tty.Close()
-		fd = int(tty.Fd())
-	}
-
-	fmt.Fprintf(os.Stderr, "Password: ")
-	password, err := terminal.ReadPassword(fd)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to read password from terminal")
-	}
-	fmt.Fprintln(os.Stderr)
-	return string(password), nil
 }
