@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"code.cloudfoundry.org/bytefmt"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 )
@@ -79,17 +80,18 @@ func NewPrettyPrinter(config PrettyPrinterConfig) Printer {
 	}
 }
 
-func (p *PrettyPrinter) PrintStatusLine(resp *http.Response) error {
+func (p *PrettyPrinter) PrintStatusLine(proto string, status string, statusCode int) error {
 	var statusColor aurora.Color
-	if 200 <= resp.StatusCode && resp.StatusCode < 300 {
+	if 200 <= statusCode && statusCode < 300 {
 		statusColor = p.headerPalette.SuccessfulStatus
 	} else {
 		statusColor = p.headerPalette.NonSuccessfulStatus
 	}
 
 	fmt.Fprintf(p.writer, "%s %s\n",
-		p.aurora.Colorize(resp.Proto, p.headerPalette.Proto),
-		p.aurora.Colorize(resp.Status, statusColor))
+		p.aurora.Colorize(proto, p.headerPalette.Proto),
+		p.aurora.Colorize(status, statusColor),
+	)
 	return nil
 }
 
@@ -97,7 +99,8 @@ func (p *PrettyPrinter) PrintRequestLine(req *http.Request) error {
 	fmt.Fprintf(p.writer, "%s %s %s\n",
 		p.aurora.Colorize(req.Method, p.headerPalette.Method),
 		p.aurora.Colorize(req.URL, p.headerPalette.URL),
-		p.aurora.Colorize(req.Proto, p.headerPalette.Proto))
+		p.aurora.Colorize(req.Proto, p.headerPalette.Proto),
+	)
 	return nil
 }
 
@@ -267,4 +270,9 @@ func (p *PrettyPrinter) printMap(value reflect.Value, depth int) error {
 
 func (p *PrettyPrinter) breakLine(depth int) {
 	fmt.Fprintf(p.writer, "\n%s", strings.Repeat(" ", depth*p.indentWidth))
+}
+
+func (p *PrettyPrinter) PrintDownload(length int64, filename string) error {
+	fmt.Fprintf(p.writer, "Downloading %sB to \"%s\"\n", bytefmt.ByteSize(uint64(length)), filename)
+	return nil
 }

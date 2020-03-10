@@ -13,9 +13,14 @@ func BuildHTTPClient(options *Options) (*http.Client, error) {
 		checkRedirect = nil
 	}
 
+	transp := http.DefaultTransport.(*http.Transport).Clone()
+	transp.TLSClientConfig.InsecureSkipVerify = options.SkipVerify
+
 	client := http.Client{
 		CheckRedirect: checkRedirect,
 		Timeout:       options.Timeout,
+		Transport:     transp,
 	}
+
 	return &client, nil
 }

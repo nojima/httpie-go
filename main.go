@@ -70,7 +70,7 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 		defer r.Body.Close()
 
 		// ReadRequest deletes Host header. We must restore it.
-		r.Header.Set("Host", r.Host)
+		r.Header.Set("Host", request.Host)
 
 		if outputOptions.PrintRequestHeader {
 			if err := printer.PrintRequestLine(r); err != nil {
@@ -100,19 +100,42 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 	}
 	defer resp.Body.Close()
 
-	// Print response
-	if outputOptions.PrintResponseHeader {
-		if err := printer.PrintStatusLine(resp); err != nil {
-			return err
+	if outputOptions.Download {
+		file := output.NewFileWriter(in.URL, outputOptions)
+
+		if outputOptions.PrintResponseHeader {
+			if err := printer.PrintStatusLine(resp.Proto, resp.Status, resp.StatusCode); err != nil {
+				return err
+			}
+			if err := printer.PrintHeader(resp.Header); err != nil {
+				return err
+			}
+			writer.Flush()
 		}
-		if err := printer.PrintHeader(resp.Header); err != nil {
+
+		if err := printer.PrintDownload(resp.ContentLength, file.Filename()); err != nil {
 			return err
 		}
 		writer.Flush()
-	}
-	if outputOptions.PrintResponseBody {
-		if err := printer.PrintBody(resp.Body, resp.Header.Get("Content-Type")); err != nil {
+
+		if err = file.Download(resp); err != nil {
 			return err
+		}
+
+	} else {
+		if outputOptions.PrintResponseHeader {
+			if err := printer.PrintStatusLine(resp.Proto, resp.Status, resp.StatusCode); err != nil {
+				return err
+			}
+			if err := printer.PrintHeader(resp.Header); err != nil {
+				return err
+			}
+			writer.Flush()
+		}
+		if outputOptions.PrintResponseBody {
+			if err := printer.PrintBody(resp.Body, resp.Header.Get("Content-Type")); err != nil {
+				return err
+			}
 		}
 	}
 

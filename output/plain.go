@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 
+	"code.cloudfoundry.org/bytefmt"
 	"github.com/pkg/errors"
 )
 
@@ -18,8 +19,8 @@ func NewPlainPrinter(writer io.Writer) Printer {
 	}
 }
 
-func (p *PlainPrinter) PrintStatusLine(resp *http.Response) error {
-	fmt.Fprintf(p.writer, "%s %s\n", resp.Proto, resp.Status)
+func (p *PlainPrinter) PrintStatusLine(proto string, status string, statusCode int) error {
+	fmt.Fprintf(p.writer, "%s %s\n", proto, status)
 	return nil
 }
 
@@ -43,5 +44,10 @@ func (p *PlainPrinter) PrintBody(body io.Reader, contentType string) error {
 	if err != nil {
 		return errors.Wrap(err, "printing body")
 	}
+	return nil
+}
+
+func (p *PlainPrinter) PrintDownload(length int64, filename string) error {
+	fmt.Fprintf(p.writer, "Downloading %sB to \"%s\"\n", bytefmt.ByteSize(uint64(length)), filename)
 	return nil
 }

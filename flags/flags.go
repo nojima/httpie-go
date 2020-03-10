@@ -46,6 +46,7 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	outputOptions := output.Options{}
 	exchangeOptions := exchange.Options{}
 	var ignoreStdin bool
+	var verifyFlag string
 	var verboseFlag bool
 	var headersFlag bool
 	var bodyFlag bool
@@ -55,6 +56,7 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	var prettyFlag string
 	var versionFlag bool
 	var licenseFlag bool
+	var http1Flag bool
 
 	// Default value 20 is a bit too small for options of httpie-go.
 	getopt.HelpColumn = 22
@@ -68,6 +70,11 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	flagSet.BoolVarLong(&headersFlag, "headers", 'h', "print only the request headers. shortcut for --print=h")
 	flagSet.BoolVarLong(&bodyFlag, "body", 'b', "print only response body. shourtcut for --print=b")
 	flagSet.BoolVarLong(&ignoreStdin, "ignore-stdin", 0, "do not attempt to read stdin")
+	flagSet.BoolVarLong(&outputOptions.Download, "download", 'd', "download file")
+	flagSet.BoolVarLong(&outputOptions.Overwrite, "overwrite", 0, "overwrite existing file")
+	flagSet.BoolVarLong(&http1Flag, "http1", 0, "force HTTP/1.1 protocol")
+	flagSet.StringVarLong(&outputOptions.OutputFile, "output", 'o', "output file")
+	flagSet.StringVarLong(&verifyFlag, "verify", 0, "verify Host SSL certificate, 'yes' or 'no' ('yes' by default, uppercase is also working)")
 	flagSet.StringVarLong(&timeout, "timeout", 0, "timeout seconds that you allow the whole operation to take")
 	flagSet.StringVarLong(&authFlag, "auth", 'a', "colon-separated username and password for authentication")
 	flagSet.StringVarLong(&prettyFlag, "pretty", 0, "controls output formatting (all, format, none)")
@@ -110,12 +117,31 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	if outputOptions.Download {
+		d = time.Duration(0)
+		exchangeOptions.FollowRedirects = true
+	}
 	exchangeOptions.Timeout = d
 
 	// Parse --pretty
 	if err := parsePretty(prettyFlag, terminalInfo.stdoutIsTerminal, &outputOptions); err != nil {
 		return nil, nil, nil, err
 	}
+
+	// Verify SSL
+	verifyFlag = strings.ToLower(verifyFlag)
+	switch verifyFlag {
+	case "no":
+		exchangeOptions.SkipVerify = true
+	case "yes":
+	case "":
+		exchangeOptions.SkipVerify = false
+	default:
+		return nil, nil, nil, fmt.Errorf("%s", "Verify flag must be 'yes' or 'no'")
+	}
+
+	// Force HTTP/1.1
+	exchangeOptions.ForceHTTP1 = http1Flag
 
 	// Parse --auth
 	if authFlag != "" {
