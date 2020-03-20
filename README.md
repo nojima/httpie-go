@@ -37,6 +37,18 @@ Request HTTP headers can be specified in the form of `key:value`.
 $ ht -v POST httpbin.org/post X-Foo:foobar
 ```
 
+Disable TLS verification.
+
+```bash
+$ ht --verify=no https://httpbin.org/get
+```
+
+Download a file.
+
+```bash
+$ ht --download <any url you want>
+```
+
 ## Documents
 
 Although httpie-go does not currently have documents, you can refer to the original [httpie's documentation](https://httpie.org/doc) since httpie-go is a clone of httpie.

@@ -3,6 +3,9 @@ EXE_NAME=ht
 build:
 	go build -o $(EXE_NAME) ./cmd/ht
 
+install:
+	go install ./cmd/ht
+
 fmt:
 	go fmt ./...
 

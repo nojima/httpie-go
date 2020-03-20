@@ -8,4 +8,8 @@ type Options struct {
 
 	EnableFormat bool
 	EnableColor  bool
+
+	Download   bool
+	OutputFile string
+	Overwrite  bool
 }
