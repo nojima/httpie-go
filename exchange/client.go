@@ -1,6 +1,7 @@
 package exchange
 
 import (
+	"crypto/tls"
 	"net/http"
 )
 
@@ -15,6 +16,10 @@ func BuildHTTPClient(options *Options) (*http.Client, error) {
 
 	transp := http.DefaultTransport.(*http.Transport).Clone()
 	transp.TLSClientConfig.InsecureSkipVerify = options.SkipVerify
+	if options.ForceHTTP1 {
+		transp.TLSClientConfig.NextProtos = []string{"http1"}
+		transp.TLSNextProto = make(map[string]func(string, *tls.Conn) http.RoundTripper)
+	}
 
 	client := http.Client{
 		CheckRedirect: checkRedirect,

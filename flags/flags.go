@@ -56,7 +56,6 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	var prettyFlag string
 	var versionFlag bool
 	var licenseFlag bool
-	var http1Flag bool
 
 	// Default value 20 is a bit too small for options of httpie-go.
 	getopt.HelpColumn = 22
@@ -72,7 +71,7 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	flagSet.BoolVarLong(&ignoreStdin, "ignore-stdin", 0, "do not attempt to read stdin")
 	flagSet.BoolVarLong(&outputOptions.Download, "download", 'd', "download file")
 	flagSet.BoolVarLong(&outputOptions.Overwrite, "overwrite", 0, "overwrite existing file")
-	flagSet.BoolVarLong(&http1Flag, "http1", 0, "force HTTP/1.1 protocol")
+	flagSet.BoolVarLong(&exchangeOptions.ForceHTTP1, "http1", 0, "force HTTP/1.1 protocol")
 	flagSet.StringVarLong(&outputOptions.OutputFile, "output", 'o', "output file")
 	flagSet.StringVarLong(&verifyFlag, "verify", 0, "verify Host SSL certificate, 'yes' or 'no' ('yes' by default, uppercase is also working)")
 	flagSet.StringVarLong(&timeout, "timeout", 0, "timeout seconds that you allow the whole operation to take")
@@ -139,9 +138,6 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	default:
 		return nil, nil, nil, fmt.Errorf("%s", "Verify flag must be 'yes' or 'no'")
 	}
-
-	// Force HTTP/1.1
-	exchangeOptions.ForceHTTP1 = http1Flag
 
 	// Parse --auth
 	if authFlag != "" {

@@ -29,7 +29,7 @@ func TestPrettyPrinter_PrintStatusLine(t *testing.T) {
 	}
 
 	// Exercise
-	err := printer.PrintStatusLine(response)
+	err := printer.PrintStatusLine(response.Proto, response.Status, response.StatusCode)
 	if err != nil {
 		t.Fatalf("unexpected error: err=%+v", err)
 	}

@@ -73,7 +73,7 @@ func (f *FileWriter) Download(resp *http.Response) error {
 	// Parameters of th new progress bar
 	bar := pb.AddBar(resp.ContentLength,
 		mpb.PrependDecorators(
-			decor.CountersKibiByte("% .2f / % .2f "),
+			decor.CountersKiloByte("% .2f / % .2f "),
 			decor.AverageSpeed(decor.UnitKB, "(% .2f)"),
 		),
 		mpb.AppendDecorators(
