@@ -90,7 +90,7 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 
 	// Check --license
 	if licenseFlag {
-		fmt.Fprintf(os.Stderr, "%s", version.Licenses)
+		version.PrintLicenses(os.Stderr)
 		os.Exit(0)
 	}
 
