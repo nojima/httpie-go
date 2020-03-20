@@ -17,7 +17,7 @@ func BuildHTTPClient(options *Options) (*http.Client, error) {
 	transp := http.DefaultTransport.(*http.Transport).Clone()
 	transp.TLSClientConfig.InsecureSkipVerify = options.SkipVerify
 	if options.ForceHTTP1 {
-		transp.TLSClientConfig.NextProtos = []string{"http1"}
+		transp.TLSClientConfig.NextProtos = []string{"http/1.1", "http/1.0"}
 		transp.TLSNextProto = make(map[string]func(string, *tls.Conn) http.RoundTripper)
 	}
 
