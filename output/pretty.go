@@ -147,8 +147,9 @@ func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
 		return errors.Wrap(err, "reading body")
 	}
 
-	// set up new PrettyPrinter
-	toks, err := getAllTokens(json.NewDecoder(bytes.NewReader(content)))
+	// decode JSON creating a new "token buffer" from which we will pretty-print
+	// the data.
+	toks, err := newTokenBuffer(json.NewDecoder(bytes.NewReader(content)))
 	if err != nil {
 		// Failed to parse body as JSON. Print as-is.
 		p.writer.Write(content)
@@ -164,18 +165,20 @@ func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
 	return nil
 }
 
-func getAllTokens(dec *json.Decoder) (*tokenBuffer, error) {
+// newTokenBuffer allows you to create a tokenBuffer which contains all the
+// tokens of the given json.Decoder.
+func newTokenBuffer(dec *json.Decoder) (*tokenBuffer, error) {
 	tks := make([]json.Token, 0, 64)
 	for {
 		tok, err := dec.Token()
 		switch err {
-		case nil: // continue
+		case nil:
+			tks = append(tks, tok)
 		case io.EOF:
 			return &tokenBuffer{tokens: tks}, nil
 		default:
 			return nil, err
 		}
-		tks = append(tks, tok)
 	}
 }
 
@@ -184,6 +187,7 @@ type tokenBuffer struct {
 	pos    int
 }
 
+// reads a new token adancing in the buffer
 func (t *tokenBuffer) token() json.Token {
 	if t.pos >= len(t.tokens) {
 		// bad, but on correct usage this will never happen.
