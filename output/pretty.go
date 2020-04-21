@@ -168,6 +168,7 @@ func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
 // newTokenBuffer allows you to create a tokenBuffer which contains all the
 // tokens of the given json.Decoder.
 func newTokenBuffer(dec *json.Decoder) (*tokenBuffer, error) {
+	dec.UseNumber()
 	tks := make([]json.Token, 0, 64)
 	for {
 		tok, err := dec.Token()
@@ -220,7 +221,7 @@ func (p *PrettyPrinter) printJSON(buf *tokenBuffer, depth int) error {
 		}
 	case bool:
 		return p.printBool(v)
-	case float64:
+	case json.Number:
 		return p.printNumber(v)
 	case string:
 		return p.printString(v)
@@ -247,8 +248,8 @@ func (p *PrettyPrinter) printBool(v bool) error {
 	return nil
 }
 
-func (p *PrettyPrinter) printNumber(n float64) error {
-	fmt.Fprintf(p.writer, "%g", p.aurora.Colorize(n, p.jsonPalette.Number))
+func (p *PrettyPrinter) printNumber(n json.Number) error {
+	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(n.String(), p.jsonPalette.Number))
 	return nil
 }
 
