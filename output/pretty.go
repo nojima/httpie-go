@@ -1,12 +1,12 @@
 package output
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -147,14 +147,17 @@ func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
 		return errors.Wrap(err, "reading body")
 	}
 
-	var v interface{}
-	if err := json.Unmarshal(content, &v); err != nil {
+	// decode JSON creating a new "token buffer" from which we will pretty-print
+	// the data.
+	toks, err := newTokenBuffer(json.NewDecoder(bytes.NewReader(content)))
+	if err != nil {
 		// Failed to parse body as JSON. Print as-is.
 		p.writer.Write(content)
 		fmt.Fprintln(p.writer)
 		return nil
 	}
-	if err := p.printJSON(v, 0); err != nil {
+
+	if err := p.printJSON(toks, 0); err != nil {
 		return err
 	}
 
@@ -162,24 +165,70 @@ func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
 	return nil
 }
 
-func (p *PrettyPrinter) printJSON(v interface{}, depth int) error {
-	if v == nil {
-		return p.printNull()
+// newTokenBuffer allows you to create a tokenBuffer which contains all the
+// tokens of the given json.Decoder.
+func newTokenBuffer(dec *json.Decoder) (*tokenBuffer, error) {
+	dec.UseNumber()
+	tks := make([]json.Token, 0, 64)
+	for {
+		tok, err := dec.Token()
+		switch err {
+		case nil:
+			tks = append(tks, tok)
+		case io.EOF:
+			return &tokenBuffer{tokens: tks}, nil
+		default:
+			return nil, err
+		}
 	}
-	value := reflect.ValueOf(v)
-	switch value.Kind() {
-	case reflect.Bool:
-		return p.printBool(value)
-	case reflect.Float64:
-		return p.printNumber(value)
-	case reflect.String:
-		return p.printString(value)
-	case reflect.Slice:
-		return p.printArray(value, depth)
-	case reflect.Map:
-		return p.printMap(value, depth)
+}
+
+type tokenBuffer struct {
+	tokens []json.Token
+	pos    int
+}
+
+// reads a new token adancing in the buffer
+func (t *tokenBuffer) token() json.Token {
+	if t.pos >= len(t.tokens) {
+		// bad, but on correct usage this will never happen.
+		panic("output: tokenBuffer is empty")
+	}
+	v := t.tokens[t.pos]
+	t.pos++
+	return v
+}
+
+// read the next token without advancing in the buffer.
+func (t *tokenBuffer) peek() json.Token {
+	if t.pos >= len(t.tokens) {
+		// bad, but on correct usage this will never happen.
+		panic("output: tokenBuffer is empty")
+	}
+	return t.tokens[t.pos]
+}
+
+func (p *PrettyPrinter) printJSON(buf *tokenBuffer, depth int) error {
+	switch v := buf.token().(type) {
+	case json.Delim:
+		switch v {
+		case '[':
+			return p.printArray(buf, depth)
+		case '{':
+			return p.printMap(buf, depth)
+		default:
+			return errors.Errorf("[BUG] wrong delim: %v", v)
+		}
+	case bool:
+		return p.printBool(v)
+	case json.Number:
+		return p.printNumber(v)
+	case string:
+		return p.printString(v)
+	case nil:
+		return p.printNull()
 	default:
-		return errors.Errorf("[BUG] unknown value in JSON: %+v", value)
+		return errors.Errorf("[BUG] unknown value in JSON: %+v", v)
 	}
 }
 
@@ -188,9 +237,9 @@ func (p *PrettyPrinter) printNull() error {
 	return nil
 }
 
-func (p *PrettyPrinter) printBool(value reflect.Value) error {
+func (p *PrettyPrinter) printBool(v bool) error {
 	var s string
-	if value.Bool() {
+	if v {
 		s = "true"
 	} else {
 		s = "false"
@@ -199,71 +248,84 @@ func (p *PrettyPrinter) printBool(value reflect.Value) error {
 	return nil
 }
 
-func (p *PrettyPrinter) printNumber(value reflect.Value) error {
-	fmt.Fprintf(p.writer, "%g", p.aurora.Colorize(value.Float(), p.jsonPalette.Number))
+func (p *PrettyPrinter) printNumber(n json.Number) error {
+	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(n.String(), p.jsonPalette.Number))
 	return nil
 }
 
-func (p *PrettyPrinter) printString(value reflect.Value) error {
-	s := value.String()
+func (p *PrettyPrinter) printString(s string) error {
 	b, _ := json.Marshal(s)
 	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(string(b), p.jsonPalette.String))
 	return nil
 }
 
-func (p *PrettyPrinter) printArray(value reflect.Value, depth int) error {
+var errMalformedJSON = errors.New("output: malformed json")
+
+func (p *PrettyPrinter) printArray(buf *tokenBuffer, depth int) error {
 	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("[", p.jsonPalette.Delimiter))
 
-	n := value.Len()
-	for i := 0; i < n; i++ {
+	// fast path: array is empty
+	if d, ok := buf.peek().(json.Delim); ok && d == ']' {
+		buf.token()
+		fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("]", p.jsonPalette.Delimiter))
+		return nil
+	}
+
+	for {
 		p.breakLine(depth + 1)
 
-		elem := value.Index(i)
-		if err := p.printJSON(elem.Interface(), depth+1); err != nil {
+		if err := p.printJSON(buf, depth+1); err != nil {
 			return err
 		}
 
-		if i != n-1 {
-			fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(",", p.jsonPalette.Delimiter))
+		if d, ok := buf.peek().(json.Delim); ok && d == ']' {
+			// we're finished
+			buf.token()
+			break
 		}
+		fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(",", p.jsonPalette.Delimiter))
 	}
 
-	if n != 0 {
-		p.breakLine(depth)
-	}
+	p.breakLine(depth)
 	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("]", p.jsonPalette.Delimiter))
 	return nil
 }
 
-func (p *PrettyPrinter) printMap(value reflect.Value, depth int) error {
+func (p *PrettyPrinter) printMap(buf *tokenBuffer, depth int) error {
 	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("{", p.jsonPalette.Delimiter))
 
-	keys := value.MapKeys()
-	sort.Slice(keys, func(i, j int) bool {
-		return keys[i].String() < keys[j].String()
-	})
+	// fast path: object is empty
+	if d, ok := buf.peek().(json.Delim); ok && d == '}' {
+		buf.token()
+		fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("}", p.jsonPalette.Delimiter))
+		return nil
+	}
 
-	for i, key := range keys {
+	for {
 		p.breakLine(depth + 1)
 
-		encodedKey, _ := json.Marshal(key.String())
+		key, ok := buf.token().(string)
+		if !ok {
+			return errMalformedJSON
+		}
+		encodedKey, _ := json.Marshal(key)
 		fmt.Fprintf(p.writer, "%s%s ",
 			p.aurora.Colorize(encodedKey, p.jsonPalette.Key),
 			p.aurora.Colorize(":", p.jsonPalette.Delimiter))
 
-		elem := value.MapIndex(key)
-		if err := p.printJSON(elem.Interface(), depth+1); err != nil {
+		if err := p.printJSON(buf, depth+1); err != nil {
 			return err
 		}
 
-		if i != len(keys)-1 {
-			fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(",", p.jsonPalette.Delimiter))
+		if d, ok := buf.peek().(json.Delim); ok && d == '}' {
+			// we're finished
+			buf.token()
+			break
 		}
+		fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(",", p.jsonPalette.Delimiter))
 	}
 
-	if len(keys) != 0 {
-		p.breakLine(depth)
-	}
+	p.breakLine(depth)
 	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("}", p.jsonPalette.Delimiter))
 	return nil
 }

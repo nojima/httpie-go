@@ -119,15 +119,15 @@ func TestPrettyPrinter_PrintBody(t *testing.T) {
 	// Verify
 	expected := strings.Join([]string{
 		`{`,
-		`    "": [],`,
-		`    "123": {},`,
+		`    "zzz": "hello ⚡",`, // unicode escapes should be converted to the characters they represent
 		`    "aaa": [`,
 		`        3.14,`,
 		`        true,`,
 		`        false,`,
 		`        "🍺"`,
 		`    ],`,
-		`    "zzz": "hello ⚡",`, // unicode escapes should be converted to the characters they represent
+		`    "123": {},`,
+		`    "": [],`,
 		`    "🍣": null`,
 		"}\n",
 	}, "\n")
