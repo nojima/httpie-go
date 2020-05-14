@@ -133,7 +133,7 @@ func isJSON(contentType string) bool {
 		contentType = contentType[:semicolon]
 	}
 
-	return contentType == "application/json"
+	return contentType == "application/json" || strings.HasSuffix(contentType, "+json")
 }
 
 func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {

@@ -135,3 +135,14 @@ func TestPrettyPrinter_PrintBody(t *testing.T) {
 		t.Errorf("unexpected output: expected=\n%s\nactual=\n%s\n", expected, buffer.String())
 	}
 }
+
+func TestPrettyPrinter_DetectJSON(t *testing.T) {
+	if !isJSON("application/json") {
+		t.Errorf("didn't detect application/json as JSON")
+	}
+
+	// See https://tools.ietf.org/html/rfc7807
+	if !isJSON("application/problem+json") {
+		t.Errorf("didn't detect application/problem+json as JSON")
+	}
+}
