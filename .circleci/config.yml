@@ -19,12 +19,19 @@ jobs:
           name: Build (mac)
           command: |
             GOOS=darwin make EXE_NAME=httpie-go_darwin_amd64
+      - run:
+          name: Build (win)
+          command: |
+            GOOS=windows GOARCH=amd64 make EXE_NAME=httpie-go_win_amd64.exe
       - store_artifacts:
           path: ~/project/httpie-go_linux_amd64
           destination: bin/httpie-go_linux_amd64
       - store_artifacts:
           path: ~/project/httpie-go_darwin_amd64
           destination: bin/httpie-go_darwin_amd64
+       - store_artifacts:
+          path: ~/project/httpie-go_win_amd64.exe
+          destination: bin/httpie-go_win_amd64.exe
 workflows:
   version: 2
   build_and_test:
