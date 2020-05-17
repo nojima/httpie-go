@@ -23,15 +23,21 @@ jobs:
           name: Build (win)
           command: |
             GOOS=windows GOARCH=amd64 make EXE_NAME=httpie-go_win_amd64.exe
-      - store_artifacts:
-          path: ~/project/httpie-go_linux_amd64
-          destination: bin/httpie-go_linux_amd64
-      - store_artifacts:
-          path: ~/project/httpie-go_darwin_amd64
-          destination: bin/httpie-go_darwin_amd64
-       - store_artifacts:
-          path: ~/project/httpie-go_win_amd64.exe
-          destination: bin/httpie-go_win_amd64.exe
+      - run:
+          name: "Publish Release on GitHub"
+          command: |
+            mkdir pkg bin && cp -aR *amd* pkg/
+            curl -skLO https://github.com/upx/upx/releases/download/v3.96/upx-3.96-amd64_linux.tar.xz
+            tar -xf upx-3.96-amd64_linux.tar.xz
+            cp upx-3.96-amd64_linux/upx bin/
+            rm -rf upx-3.96-amd64_linux upx-3.96-amd64_linux.tar.xz
+            bin/upx pkg/httpie-go_linux_amd64
+            bin/upx pkg/httpie-go_win_amd64.exe
+            bin/upx pkg/httpie-go_darwin_amd64
+            go get -u github.com/tcnksm/ghr
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${TAG_VERSION} ./pkg/
+
+
 workflows:
   version: 2
   build_and_test:
