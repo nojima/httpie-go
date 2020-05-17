@@ -1,6 +1,6 @@
 # httpie-go
 
-[![CircleCI](https://circleci.com/gh/nojima/httpie-go.svg?style=shield)](https://circleci.com/gh/nojima/httpie-go)
+[![CircleCI](https://circleci.com/gh/jniltinho/httpie-go.svg?style=shield)](https://circleci.com/gh/jniltinho/httpie-go)
 
 ![httpie-go screenshot](./docs/images/screenshot.png)
 
