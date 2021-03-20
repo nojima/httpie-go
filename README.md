@@ -59,3 +59,9 @@ Note that some minor options are yet to be implemented in httpie-go.
 ```
 make
 ```
+
+For non-standard Linux system like Android [termux](https://termux.com/), use following method to avoid the DNS issue.
+
+```
+make build-termux
+```
