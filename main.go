@@ -8,7 +8,6 @@ import (
 	"net/http/httputil"
 	"os"
 
-	_ "github.com/mtibben/androiddnsfix"
 	"github.com/nojima/httpie-go/exchange"
 	"github.com/nojima/httpie-go/flags"
 	"github.com/nojima/httpie-go/input"
