@@ -102,37 +102,105 @@ func TestPrettyPrinter_PrintHeader(t *testing.T) {
 }
 
 func TestPrettyPrinter_PrintBody(t *testing.T) {
-	// Setup
-	var buffer strings.Builder
-	printer := NewPrettyPrinter(PrettyPrinterConfig{
-		Writer:      &buffer,
-		EnableColor: false,
-	})
-	body := `{"zzz": "hello \u26a1", "aaa": [3.14, true, false, "🍺"], "123": {}, "": [], "🍣": null}`
-
-	// Exercise
-	err := printer.PrintBody(strings.NewReader(body), "application/json")
-	if err != nil {
-		t.Fatalf("unexpected error: err=%+v", err)
+	testCases := []struct {
+		title    string
+		body     string
+		expected string
+	}{
+		{
+			title: "Normal JSON",
+			body:  `{"zzz": "hello \u26a1", "aaa": [3.14, true, false, "🍺"], "123": {}, "": [], "🍣": null}`,
+			expected: strings.Join([]string{
+				`{`,
+				`    "zzz": "hello ⚡",`, // unicode escapes should be converted to the characters they represent
+				`    "aaa": [`,
+				`        3.14,`,
+				`        true,`,
+				`        false,`,
+				`        "🍺"`,
+				`    ],`,
+				`    "123": {},`,
+				`    "": [],`,
+				`    "🍣": null`,
+				"}\n",
+			}, "\n"),
+		},
+		{
+			title: "Escaped",
+			body:  `{"\"": "aaa\nbbb"}`,
+			expected: strings.Join([]string{
+				`{`,
+				`    "\"": "aaa\nbbb"`,
+				"}\n",
+			}, "\n"),
+		},
+		{
+			title:    "Body is empty",
+			body:     "",
+			expected: "",
+		},
+		{
+			title:    "Body contains only whitespaces",
+			body:     "    \n",
+			expected: "    \n",
+		},
+		{
+			title:    "Not a JSON 1",
+			body:     "xyz",
+			expected: "xyz",
+		},
+		{
+			title:    "Not a JSON 2",
+			body:     `[100 200]`,
+			expected: `[100 200]`,
+		},
+		{
+			title:    "Malformed JSON 1",
+			body:     `{`,
+			expected: "{\n    \n",
+		},
+		{
+			title:    "Malformed JSON 2",
+			body:     `[`,
+			expected: "[\n    \n",
+		},
+		{
+			title:    "Malformed JSON 3",
+			body:     `[1`,
+			expected: "[\n    1,\n    \n",
+		},
+		{
+			title: "Malformed JSON 4",
+			body:  `{"hello": "world"`,
+			expected: strings.Join([]string{
+				`{`,
+				`    "hello": "world",`,
+				`    `,
+				``,
+			}, "\n"),
+		},
 	}
 
-	// Verify
-	expected := strings.Join([]string{
-		`{`,
-		`    "zzz": "hello ⚡",`, // unicode escapes should be converted to the characters they represent
-		`    "aaa": [`,
-		`        3.14,`,
-		`        true,`,
-		`        false,`,
-		`        "🍺"`,
-		`    ],`,
-		`    "123": {},`,
-		`    "": [],`,
-		`    "🍣": null`,
-		"}\n",
-	}, "\n")
-	if buffer.String() != expected {
-		t.Errorf("unexpected output: expected=\n%s\nactual=\n%s\n", expected, buffer.String())
+	for _, tt := range testCases {
+		t.Run(tt.title, func(t *testing.T) {
+			// Setup
+			var buffer strings.Builder
+			printer := NewPrettyPrinter(PrettyPrinterConfig{
+				Writer:      &buffer,
+				EnableColor: false,
+			})
+
+			// Exercise
+			err := printer.PrintBody(strings.NewReader(tt.body), "application/json")
+			if err != nil {
+				t.Fatalf("unexpected error: err=%+v", err)
+			}
+
+			// Verify
+			if buffer.String() != tt.expected {
+				t.Errorf("unexpected output: expected=\n%s\nactual=\n%s\n", tt.expected, buffer.String())
+			}
+		})
 	}
 }
 
