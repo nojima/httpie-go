@@ -147,6 +147,12 @@ func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
 		return errors.Wrap(err, "reading body")
 	}
 
+	// No need to print if no content in the body
+	if len(content)==0{
+		fmt.Fprintln(p.writer)
+		return nil
+	}
+
 	// decode JSON creating a new "token buffer" from which we will pretty-print
 	// the data.
 	toks, err := newTokenBuffer(json.NewDecoder(bytes.NewReader(content)))
