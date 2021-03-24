@@ -70,7 +70,11 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 		defer r.Body.Close()
 
 		// ReadRequest deletes Host header. We must restore it.
-		r.Header.Set("Host", request.Host)
+		if request.Host != "" {
+			r.Header.Set("Host", request.Host)
+		} else {
+			r.Header.Set("Host", request.URL.Host)
+		}
 
 		if outputOptions.PrintRequestHeader {
 			if err := printer.PrintRequestLine(r); err != nil {
