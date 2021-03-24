@@ -69,6 +69,8 @@ var defaultJSONPalette = JSONPalette{
 	Delimiter: aurora.WhiteFg,
 }
 
+var errMalformedJSON = errors.New("output: malformed json")
+
 func NewPrettyPrinter(config PrettyPrinterConfig) Printer {
 	return &PrettyPrinter{
 		writer:        config.Writer,
@@ -150,14 +152,17 @@ func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
 	// decode JSON creating a new "token buffer" from which we will pretty-print
 	// the data.
 	toks, err := newTokenBuffer(json.NewDecoder(bytes.NewReader(content)))
-	if err != nil {
+	if err != nil || len(toks.tokens) == 0 {
 		// Failed to parse body as JSON. Print as-is.
 		p.writer.Write(content)
-		fmt.Fprintln(p.writer)
 		return nil
 	}
 
-	if err := p.printJSON(toks, 0); err != nil {
+	err = p.printJSON(toks, 0)
+	// errMalformedJSON errors can be ignored. This is because the JSON is
+	// pre-tokenized, and therefore errMalformedJSON errors only occur when
+	// the JSON ends in the middle.
+	if err != nil && !errors.Is(err, errMalformedJSON) {
 		return err
 	}
 
@@ -188,22 +193,23 @@ type tokenBuffer struct {
 	pos    int
 }
 
-// reads a new token adancing in the buffer
+// endOfBody is a marker of the end of a token sequence.
+type endOfBody struct{}
+
+// token reads a new token adancing in the buffer
 func (t *tokenBuffer) token() json.Token {
 	if t.pos >= len(t.tokens) {
-		// bad, but on correct usage this will never happen.
-		panic("output: tokenBuffer is empty")
+		return endOfBody{}
 	}
 	v := t.tokens[t.pos]
 	t.pos++
 	return v
 }
 
-// read the next token without advancing in the buffer.
+// peek reads the next token without advancing in the buffer.
 func (t *tokenBuffer) peek() json.Token {
 	if t.pos >= len(t.tokens) {
-		// bad, but on correct usage this will never happen.
-		panic("output: tokenBuffer is empty")
+		return endOfBody{}
 	}
 	return t.tokens[t.pos]
 }
@@ -227,8 +233,10 @@ func (p *PrettyPrinter) printJSON(buf *tokenBuffer, depth int) error {
 		return p.printString(v)
 	case nil:
 		return p.printNull()
+	case endOfBody:
+		return errMalformedJSON
 	default:
-		return errors.Errorf("[BUG] unknown value in JSON: %+v", v)
+		return errors.Errorf("[BUG] unknown value in JSON: %#v", v)
 	}
 }
 
@@ -258,8 +266,6 @@ func (p *PrettyPrinter) printString(s string) error {
 	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize(string(b), p.jsonPalette.String))
 	return nil
 }
-
-var errMalformedJSON = errors.New("output: malformed json")
 
 func (p *PrettyPrinter) printArray(buf *tokenBuffer, depth int) error {
 	fmt.Fprintf(p.writer, "%s", p.aurora.Colorize("[", p.jsonPalette.Delimiter))
