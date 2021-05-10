@@ -104,18 +104,18 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 	}
 	defer resp.Body.Close()
 
+	if outputOptions.PrintResponseHeader {
+		if err := printer.PrintStatusLine(resp.Proto, resp.Status, resp.StatusCode); err != nil {
+			return err
+		}
+		if err := printer.PrintHeader(resp.Header); err != nil {
+			return err
+		}
+		writer.Flush()
+	}
+
 	if outputOptions.Download {
 		file := output.NewFileWriter(in.URL, outputOptions)
-
-		if outputOptions.PrintResponseHeader {
-			if err := printer.PrintStatusLine(resp.Proto, resp.Status, resp.StatusCode); err != nil {
-				return err
-			}
-			if err := printer.PrintHeader(resp.Header); err != nil {
-				return err
-			}
-			writer.Flush()
-		}
 
 		if err := printer.PrintDownload(resp.ContentLength, file.Filename()); err != nil {
 			return err
@@ -127,15 +127,6 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 		}
 
 	} else {
-		if outputOptions.PrintResponseHeader {
-			if err := printer.PrintStatusLine(resp.Proto, resp.Status, resp.StatusCode); err != nil {
-				return err
-			}
-			if err := printer.PrintHeader(resp.Header); err != nil {
-				return err
-			}
-			writer.Flush()
-		}
 		if outputOptions.PrintResponseBody {
 			if err := printer.PrintBody(resp.Body, resp.Header.Get("Content-Type")); err != nil {
 				return err
