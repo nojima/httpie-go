@@ -75,6 +75,7 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	flagSet.StringVarLong(&outputOptions.OutputFile, "output", 'o', "output file")
 	flagSet.StringVarLong(&verifyFlag, "verify", 0, "verify Host SSL certificate, 'yes' or 'no' ('yes' by default, uppercase is also working)")
 	flagSet.StringVarLong(&timeout, "timeout", 0, "timeout seconds that you allow the whole operation to take")
+	flagSet.BoolVarLong(&exchangeOptions.CheckStatus, "check-status", 0, "Also check the HTTP status code and exit with an error if the status indicates one")
 	flagSet.StringVarLong(&authFlag, "auth", 'a', "colon-separated username and password for authentication")
 	flagSet.StringVarLong(&prettyFlag, "pretty", 0, "controls output formatting (all, format, none)")
 	flagSet.BoolVarLong(&exchangeOptions.FollowRedirects, "follow", 'F', "follow 30x Location redirects")

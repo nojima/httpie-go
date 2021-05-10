@@ -8,6 +8,7 @@ type Options struct {
 	Auth            AuthOptions
 	SkipVerify      bool
 	ForceHTTP1      bool
+	CheckStatus     bool
 }
 
 type AuthOptions struct {
