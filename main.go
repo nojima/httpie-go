@@ -15,6 +15,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	OK = 0
+	// Used only when requested with --check-status
+	ERROR_HTTP_3XX = 3
+	ERROR_HTTP_4XX = 4
+	ERROR_HTTP_5XX = 5
+)
+
 func Main() error {
 	// Parse flags
 	args, usage, optionSet, err := flags.Parse(os.Args)
@@ -36,14 +44,31 @@ func Main() error {
 	}
 
 	// Send request and receive response
-	if err := Exchange(in, &exchangeOptions, &outputOptions); err != nil {
+	status, err := Exchange(in, &exchangeOptions, &outputOptions)
+	if err != nil {
 		return err
+	}
+
+	if exchangeOptions.CheckStatus {
+		os.Exit(getExitStatus(status, exchangeOptions.FollowRedirects))
 	}
 
 	return nil
 }
 
-func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions *output.Options) error {
+func getExitStatus(http_status int, follow bool) int {
+	if (300 <= http_status) && (http_status < 400) && ! follow {
+		return ERROR_HTTP_3XX
+	} else if (400 <= http_status) && (http_status < 500) {
+		return ERROR_HTTP_4XX
+	} else if (500 <= http_status) && (http_status < 600) {
+		return ERROR_HTTP_4XX
+	} else {
+		return OK
+	}
+}
+
+func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions *output.Options) (int, error) {
 	// Prepare printer
 	writer := bufio.NewWriter(os.Stdout)
 	defer writer.Flush()
@@ -52,7 +77,7 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 	// Build HTTP request
 	request, err := exchange.BuildHTTPRequest(in, exchangeOptions)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	// Print HTTP request
@@ -61,11 +86,11 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 		// We can get these headers by DumpRequestOut and ReadRequest.
 		dump, err := httputil.DumpRequestOut(request, true)
 		if err != nil {
-			return err // should not happen
+			return -1, err // should not happen
 		}
 		r, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(dump)))
 		if err != nil {
-			return err // should not happen
+			return -1, err // should not happen
 		}
 		defer r.Body.Close()
 
@@ -78,15 +103,15 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 
 		if outputOptions.PrintRequestHeader {
 			if err := printer.PrintRequestLine(r); err != nil {
-				return err
+				return -1, err
 			}
 			if err := printer.PrintHeader(r.Header); err != nil {
-				return err
+				return -1, err
 			}
 		}
 		if outputOptions.PrintRequestBody {
 			if err := printer.PrintBody(r.Body, r.Header.Get("Content-Type")); err != nil {
-				return err
+				return -1, err
 			}
 		}
 		fmt.Fprintln(writer)
@@ -96,52 +121,43 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 	// Send HTTP request and receive HTTP request
 	httpClient, err := exchange.BuildHTTPClient(exchangeOptions)
 	if err != nil {
-		return err
+		return -1, err
 	}
 	resp, err := httpClient.Do(request)
 	if err != nil {
-		return errors.Wrap(err, "sending HTTP request")
+		return -1, errors.Wrap(err, "sending HTTP request")
 	}
 	defer resp.Body.Close()
+
+	if outputOptions.PrintResponseHeader {
+		if err := printer.PrintStatusLine(resp.Proto, resp.Status, resp.StatusCode); err != nil {
+			return -1, err
+		}
+		if err := printer.PrintHeader(resp.Header); err != nil {
+			return -1, err
+		}
+		writer.Flush()
+	}
 
 	if outputOptions.Download {
 		file := output.NewFileWriter(in.URL, outputOptions)
 
-		if outputOptions.PrintResponseHeader {
-			if err := printer.PrintStatusLine(resp.Proto, resp.Status, resp.StatusCode); err != nil {
-				return err
-			}
-			if err := printer.PrintHeader(resp.Header); err != nil {
-				return err
-			}
-			writer.Flush()
-		}
-
 		if err := printer.PrintDownload(resp.ContentLength, file.Filename()); err != nil {
-			return err
+			return -1, err
 		}
 		writer.Flush()
 
 		if err = file.Download(resp); err != nil {
-			return err
+			return -1, err
 		}
 
 	} else {
-		if outputOptions.PrintResponseHeader {
-			if err := printer.PrintStatusLine(resp.Proto, resp.Status, resp.StatusCode); err != nil {
-				return err
-			}
-			if err := printer.PrintHeader(resp.Header); err != nil {
-				return err
-			}
-			writer.Flush()
-		}
 		if outputOptions.PrintResponseBody {
 			if err := printer.PrintBody(resp.Body, resp.Header.Get("Content-Type")); err != nil {
-				return err
+				return -1, err
 			}
 		}
 	}
 
-	return nil
+	return resp.StatusCode, nil
 }
