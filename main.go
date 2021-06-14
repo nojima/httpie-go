@@ -15,14 +15,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	OK = 0
-	// Used only when requested with --check-status
-	ERROR_HTTP_3XX = 3
-	ERROR_HTTP_4XX = 4
-	ERROR_HTTP_5XX = 5
-)
-
 func Main() error {
 	// Parse flags
 	args, usage, optionSet, err := flags.Parse(os.Args)
@@ -50,22 +42,17 @@ func Main() error {
 	}
 
 	if exchangeOptions.CheckStatus {
-		os.Exit(getExitStatus(status, exchangeOptions.FollowRedirects))
+		os.Exit(getExitStatus(status))
 	}
 
 	return nil
 }
 
-func getExitStatus(http_status int, follow bool) int {
-	if (300 <= http_status) && (http_status < 400) && ! follow {
-		return ERROR_HTTP_3XX
-	} else if (400 <= http_status) && (http_status < 500) {
-		return ERROR_HTTP_4XX
-	} else if (500 <= http_status) && (http_status < 600) {
-		return ERROR_HTTP_4XX
-	} else {
-		return OK
+func getExitStatus(statusCode int) int {
+	if 300 <= statusCode && statusCode < 600 {
+		return statusCode / 100
 	}
+	return 0
 }
 
 func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions *output.Options) (int, error) {
@@ -150,7 +137,6 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 		if err = file.Download(resp); err != nil {
 			return -1, err
 		}
-
 	} else {
 		if outputOptions.PrintResponseBody {
 			if err := printer.PrintBody(resp.Body, resp.Header.Get("Content-Type")); err != nil {
