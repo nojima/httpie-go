@@ -16,6 +16,14 @@ import (
 )
 
 func Main() error {
+	return MainWithOptions(&Options{})
+}
+
+type Options struct {
+	Transport http.RoundTripper
+}
+
+func MainWithOptions(options *Options) error {
 	// Parse flags
 	args, usage, optionSet, err := flags.Parse(os.Args)
 	if err != nil {
@@ -23,6 +31,7 @@ func Main() error {
 	}
 	inputOptions := optionSet.InputOptions
 	exchangeOptions := optionSet.ExchangeOptions
+	exchangeOptions.Transport = options.Transport
 	outputOptions := optionSet.OutputOptions
 
 	// Parse positional arguments

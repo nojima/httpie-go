@@ -14,17 +14,21 @@ func BuildHTTPClient(options *Options) (*http.Client, error) {
 		checkRedirect = nil
 	}
 
-	transp := http.DefaultTransport.(*http.Transport).Clone()
-	transp.TLSClientConfig.InsecureSkipVerify = options.SkipVerify
-	if options.ForceHTTP1 {
-		transp.TLSClientConfig.NextProtos = []string{"http/1.1", "http/1.0"}
-		transp.TLSNextProto = make(map[string]func(string, *tls.Conn) http.RoundTripper)
-	}
-
 	client := http.Client{
 		CheckRedirect: checkRedirect,
 		Timeout:       options.Timeout,
-		Transport:     transp,
+	}
+
+	if options.Transport == nil {
+		transp := http.DefaultTransport.(*http.Transport).Clone()
+		transp.TLSClientConfig.InsecureSkipVerify = options.SkipVerify
+		if options.ForceHTTP1 {
+			transp.TLSClientConfig.NextProtos = []string{"http/1.1", "http/1.0"}
+			transp.TLSNextProto = make(map[string]func(string, *tls.Conn) http.RoundTripper)
+		}
+		client.Transport = transp
+	} else {
+		client.Transport = options.Transport
 	}
 
 	return &client, nil

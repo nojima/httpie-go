@@ -1,6 +1,9 @@
 package exchange
 
-import "time"
+import (
+	"net/http"
+	"time"
+)
 
 type Options struct {
 	Timeout         time.Duration
@@ -9,6 +12,7 @@ type Options struct {
 	SkipVerify      bool
 	ForceHTTP1      bool
 	CheckStatus     bool
+	Transport       http.RoundTripper
 }
 
 type AuthOptions struct {
