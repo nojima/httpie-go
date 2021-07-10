@@ -16,6 +16,8 @@ import (
 )
 
 type Options struct {
+	// Transport is applied to the underlying HTTP client. Use to mock or
+	// intercept network traffic.  If nil, http.DefaultTransport will be cloned.
 	Transport http.RoundTripper
 }
 
