@@ -19,16 +19,18 @@ func BuildHTTPClient(options *Options) (*http.Client, error) {
 		Timeout:       options.Timeout,
 	}
 
+	var transp http.RoundTripper
 	if options.Transport == nil {
-		transp := http.DefaultTransport.(*http.Transport).Clone()
-		transp.TLSClientConfig.InsecureSkipVerify = options.SkipVerify
-		if options.ForceHTTP1 {
-			transp.TLSClientConfig.NextProtos = []string{"http/1.1", "http/1.0"}
-			transp.TLSNextProto = make(map[string]func(string, *tls.Conn) http.RoundTripper)
-		}
-		client.Transport = transp
+		transp = http.DefaultTransport.(*http.Transport).Clone()
 	} else {
-		client.Transport = options.Transport
+		transp = options.Transport
+	}
+	if httpTransport, ok := transp.(*http.Transport); ok {
+		httpTransport.TLSClientConfig.InsecureSkipVerify = options.SkipVerify
+		if options.ForceHTTP1 {
+			httpTransport.TLSClientConfig.NextProtos = []string{"http/1.1", "http/1.0"}
+			httpTransport.TLSNextProto = make(map[string]func(string, *tls.Conn) http.RoundTripper)
+		}
 	}
 
 	return &client, nil
