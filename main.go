@@ -15,15 +15,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Main() error {
-	return MainWithOptions(&Options{})
-}
-
 type Options struct {
 	Transport http.RoundTripper
 }
 
-func MainWithOptions(options *Options) error {
+func Main(options *Options) error {
 	// Parse flags
 	args, usage, optionSet, err := flags.Parse(os.Args)
 	if err != nil {
