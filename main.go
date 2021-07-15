@@ -15,7 +15,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Main() error {
+type Options struct {
+	// Transport is applied to the underlying HTTP client. Use to mock or
+	// intercept network traffic.  If nil, http.DefaultTransport will be cloned.
+	Transport http.RoundTripper
+}
+
+func Main(options *Options) error {
 	// Parse flags
 	args, usage, optionSet, err := flags.Parse(os.Args)
 	if err != nil {
@@ -23,6 +29,7 @@ func Main() error {
 	}
 	inputOptions := optionSet.InputOptions
 	exchangeOptions := optionSet.ExchangeOptions
+	exchangeOptions.Transport = options.Transport
 	outputOptions := optionSet.OutputOptions
 
 	// Parse positional arguments

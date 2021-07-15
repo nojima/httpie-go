@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	if err := httpie.Main(); err != nil {
+	if err := httpie.Main(&httpie.Options{}); err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
 		os.Exit(1)
 	}
