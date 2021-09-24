@@ -32,6 +32,7 @@ func BuildHTTPClient(options *Options) (*http.Client, error) {
 			httpTransport.TLSNextProto = make(map[string]func(string, *tls.Conn) http.RoundTripper)
 		}
 	}
+	client.Transport = transp
 
 	return &client, nil
 }
