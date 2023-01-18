@@ -22,6 +22,7 @@ type Options struct {
 }
 
 func Main(options *Options) error {
+	fmt.Println(os.Args)
 	// Parse flags
 	args, usage, optionSet, err := flags.Parse(os.Args)
 	if err != nil {
@@ -31,6 +32,10 @@ func Main(options *Options) error {
 	exchangeOptions := optionSet.ExchangeOptions
 	exchangeOptions.Transport = options.Transport
 	outputOptions := optionSet.OutputOptions
+
+	// this shouldn't be hardcoded, but for testing
+	// we are keeping it in this way
+	inputOptions.ReadStdin = false
 
 	// Parse positional arguments
 	in, err := input.ParseArgs(args, os.Stdin, &inputOptions)
