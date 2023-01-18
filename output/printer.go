@@ -11,6 +11,7 @@ type Printer interface {
 	PrintHeader(header http.Header) error
 	PrintBody(body io.Reader, contentType string) error
 	PrintDownload(length int64, filename string) error
+	GetPlainPrinter() Printer
 }
 
 func NewPrinter(w io.Writer, options *Options) Printer {

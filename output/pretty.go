@@ -22,6 +22,7 @@ type PrettyPrinter struct {
 	headerPalette *HeaderPalette
 	jsonPalette   *JSONPalette
 	indentWidth   int
+	BodyContent   string
 }
 
 type PrettyPrinterConfig struct {
@@ -80,6 +81,10 @@ func NewPrettyPrinter(config PrettyPrinterConfig) Printer {
 		jsonPalette:   &defaultJSONPalette,
 		indentWidth:   4,
 	}
+}
+
+func (p *PrettyPrinter) GetPlainPrinter() Printer {
+	return p.plain
 }
 
 func (p *PrettyPrinter) PrintStatusLine(proto string, status string, statusCode int) error {
@@ -145,6 +150,7 @@ func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
 	}
 
 	content, err := ioutil.ReadAll(body)
+	p.BodyContent = strings.Clone(string(content))
 	if err != nil {
 		return errors.Wrap(err, "reading body")
 	}

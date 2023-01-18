@@ -6,6 +6,6 @@ import (
 )
 
 func TestGooglePing(t *testing.T) {
-	os.Args = []string{"./ht", "https://google.com"}
+	os.Args = []string{"./ht", "http://localhost:8080/get"}
 	main()
 }

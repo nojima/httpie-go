@@ -4,19 +4,25 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"code.cloudfoundry.org/bytefmt"
 	"github.com/pkg/errors"
 )
 
 type PlainPrinter struct {
-	writer io.Writer
+	writer      io.Writer
+	BodyContent string
 }
 
 func NewPlainPrinter(writer io.Writer) Printer {
 	return &PlainPrinter{
 		writer: writer,
 	}
+}
+
+func (p *PlainPrinter) GetPlainPrinter() Printer {
+	return p
 }
 
 func (p *PlainPrinter) PrintStatusLine(proto string, status string, statusCode int) error {
@@ -40,7 +46,9 @@ func (p *PlainPrinter) PrintHeader(header http.Header) error {
 }
 
 func (p *PlainPrinter) PrintBody(body io.Reader, contentType string) error {
-	_, err := io.Copy(p.writer, body)
+	s, _ := io.ReadAll(body)
+	p.BodyContent = string(s)
+	_, err := io.Copy(p.writer, strings.NewReader(p.BodyContent))
 	if err != nil {
 		return errors.Wrap(err, "printing body")
 	}

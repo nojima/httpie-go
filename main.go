@@ -71,8 +71,11 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 	// Prepare printer
 	writer := bufio.NewWriter(os.Stdout)
 	defer writer.Flush()
-	printer := output.NewPrinter(writer, outputOptions)
 
+	// var bodyPlainBuffer bytes.Buffer
+	// mWriter := io.MultiWriter(writer, &bodyPlainBuffer)
+
+	printer := output.NewPrinter(writer, outputOptions)
 	// Build HTTP request
 	request, err := exchange.BuildHTTPRequest(in, exchangeOptions)
 	if err != nil {
@@ -155,6 +158,15 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 				return -1, err
 			}
 		}
+	}
+
+	switch printer.(type) {
+	case *output.PrettyPrinter:
+		pp := printer.(*output.PrettyPrinter)
+		fmt.Println(pp.BodyContent)
+	case *output.PlainPrinter:
+		pp := printer.(*output.PlainPrinter)
+		fmt.Println(pp.BodyContent)
 	}
 
 	return resp.StatusCode, nil
