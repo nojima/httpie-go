@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/HexmosTech/httpie-go/exchange"
+	"github.com/HexmosTech/httpie-go/input"
+	"github.com/HexmosTech/httpie-go/output"
+	"github.com/HexmosTech/httpie-go/version"
 	"github.com/mattn/go-isatty"
-	"github.com/nojima/httpie-go/exchange"
-	"github.com/nojima/httpie-go/input"
-	"github.com/nojima/httpie-go/output"
-	"github.com/nojima/httpie-go/version"
 	"github.com/pborman/getopt"
 	"github.com/pkg/errors"
 )

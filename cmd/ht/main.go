@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nojima/httpie-go"
+	"github.com/HexmosTech/httpie-go"
 )
 
 func main() {

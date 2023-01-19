@@ -15,7 +15,7 @@ var Licenses = []License{
 	{
 		ModuleName:  "httpie-go",
 		LicenseName: "MIT License",
-		Link:        "https://github.com/nojima/httpie-go/blob/master/LICENSE",
+		Link:        "https://github.com/HexmosTech/httpie-go/blob/master/LICENSE",
 	},
 	{
 		ModuleName:  "Go",

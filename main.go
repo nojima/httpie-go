@@ -8,10 +8,10 @@ import (
 	"net/http/httputil"
 	"os"
 
-	"github.com/nojima/httpie-go/exchange"
-	"github.com/nojima/httpie-go/flags"
-	"github.com/nojima/httpie-go/input"
-	"github.com/nojima/httpie-go/output"
+	"github.com/HexmosTech/httpie-go/exchange"
+	"github.com/HexmosTech/httpie-go/flags"
+	"github.com/HexmosTech/httpie-go/input"
+	"github.com/HexmosTech/httpie-go/output"
 	"github.com/pkg/errors"
 )
 

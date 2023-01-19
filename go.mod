@@ -1,4 +1,4 @@
-module github.com/nojima/httpie-go
+module github.com/HexmosTech/httpie-go
 
 go 1.13
 

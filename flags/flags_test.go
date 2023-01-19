@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nojima/httpie-go/exchange"
-	"github.com/nojima/httpie-go/output"
+	"github.com/HexmosTech/httpie-go/exchange"
+	"github.com/HexmosTech/httpie-go/output"
 )
 
 func TestParse(t *testing.T) {

@@ -14,8 +14,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nojima/httpie-go/input"
-	"github.com/nojima/httpie-go/version"
+	"github.com/HexmosTech/httpie-go/input"
+	"github.com/HexmosTech/httpie-go/version"
 )
 
 func parseURL(t *testing.T, rawurl string) *url.URL {

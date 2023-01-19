@@ -14,8 +14,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/nojima/httpie-go/input"
-	"github.com/nojima/httpie-go/version"
+	"github.com/HexmosTech/httpie-go/input"
+	"github.com/HexmosTech/httpie-go/version"
 	"github.com/pkg/errors"
 )
 
