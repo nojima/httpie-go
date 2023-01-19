@@ -35,7 +35,7 @@ func Main(options *Options) error {
 
 	// this shouldn't be hardcoded, but for testing
 	// we are keeping it in this way
-	inputOptions.ReadStdin = false
+	// inputOptions.ReadStdin = false
 
 	// Parse positional arguments
 	in, err := input.ParseArgs(args, os.Stdin, &inputOptions)
