@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -21,7 +22,7 @@ type Options struct {
 	Transport http.RoundTripper
 }
 
-func Lama2Entry(cmdArgs []string) error {
+func Lama2Entry(cmdArgs []string, stdinBody io.Reader) error {
 	// Parse flags
 	options := Options{}
 	args, usage, optionSet, err := flags.Parse(cmdArgs)
@@ -38,7 +39,7 @@ func Lama2Entry(cmdArgs []string) error {
 	// inputOptions.ReadStdin = false
 
 	// Parse positional arguments
-	in, err := input.ParseArgs(args, os.Stdin, &inputOptions)
+	in, err := input.ParseArgs(args, stdinBody, &inputOptions)
 	if _, ok := errors.Cause(err).(*input.UsageError); ok {
 		usage.PrintUsage(os.Stderr)
 		return err
