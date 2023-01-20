@@ -22,12 +22,18 @@ type Options struct {
 	Transport http.RoundTripper
 }
 
-func Lama2Entry(cmdArgs []string, stdinBody io.Reader) error {
+type ExResponse struct {
+	StatusCode int
+	Body       string
+	Headers    map[string]string
+}
+
+func Lama2Entry(cmdArgs []string, stdinBody io.Reader) (ExResponse, error) {
 	// Parse flags
 	options := Options{}
 	args, usage, optionSet, err := flags.Parse(cmdArgs)
 	if err != nil {
-		return err
+		return ExResponse{}, err
 	}
 	inputOptions := optionSet.InputOptions
 	exchangeOptions := optionSet.ExchangeOptions
@@ -42,23 +48,23 @@ func Lama2Entry(cmdArgs []string, stdinBody io.Reader) error {
 	in, err := input.ParseArgs(args, stdinBody, &inputOptions)
 	if _, ok := errors.Cause(err).(*input.UsageError); ok {
 		usage.PrintUsage(os.Stderr)
-		return err
+		return ExResponse{}, err
 	}
 	if err != nil {
-		return err
+		return ExResponse{}, err
 	}
 
 	// Send request and receive response
 	status, err := Exchange(in, &exchangeOptions, &outputOptions)
 	if err != nil {
-		return err
+		return ExResponse{}, err
 	}
 
 	if exchangeOptions.CheckStatus {
-		os.Exit(getExitStatus(status))
+		os.Exit(getExitStatus(status.StatusCode))
 	}
 
-	return nil
+	return status, nil
 }
 
 func Main(options *Options) error {
@@ -93,7 +99,7 @@ func Main(options *Options) error {
 	}
 
 	if exchangeOptions.CheckStatus {
-		os.Exit(getExitStatus(status))
+		os.Exit(getExitStatus(status.StatusCode))
 	}
 
 	return nil
@@ -106,7 +112,7 @@ func getExitStatus(statusCode int) int {
 	return 0
 }
 
-func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions *output.Options) (int, error) {
+func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions *output.Options) (ExResponse, error) {
 	// Prepare printer
 	writer := bufio.NewWriter(os.Stdout)
 	defer writer.Flush()
@@ -118,7 +124,7 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 	// Build HTTP request
 	request, err := exchange.BuildHTTPRequest(in, exchangeOptions)
 	if err != nil {
-		return -1, err
+		return ExResponse{-1, "", map[string]string{}}, err
 	}
 
 	// Print HTTP request
@@ -127,11 +133,11 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 		// We can get these headers by DumpRequestOut and ReadRequest.
 		dump, err := httputil.DumpRequestOut(request, true)
 		if err != nil {
-			return -1, err // should not happen
+			return ExResponse{-1, "", map[string]string{}}, err // should not happen
 		}
 		r, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(dump)))
 		if err != nil {
-			return -1, err // should not happen
+			return ExResponse{-1, "", map[string]string{}}, err // should not happen
 		}
 		defer r.Body.Close()
 
@@ -144,15 +150,15 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 
 		if outputOptions.PrintRequestHeader {
 			if err := printer.PrintRequestLine(r); err != nil {
-				return -1, err
+				return ExResponse{-1, "", map[string]string{}}, err
 			}
 			if err := printer.PrintHeader(r.Header); err != nil {
-				return -1, err
+				return ExResponse{-1, "", map[string]string{}}, err
 			}
 		}
 		if outputOptions.PrintRequestBody {
 			if err := printer.PrintBody(r.Body, r.Header.Get("Content-Type")); err != nil {
-				return -1, err
+				return ExResponse{-1, "", map[string]string{}}, err
 			}
 		}
 		fmt.Fprintln(writer)
@@ -162,20 +168,20 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 	// Send HTTP request and receive HTTP request
 	httpClient, err := exchange.BuildHTTPClient(exchangeOptions)
 	if err != nil {
-		return -1, err
+		return ExResponse{-1, "", map[string]string{}}, err
 	}
 	resp, err := httpClient.Do(request)
 	if err != nil {
-		return -1, errors.Wrap(err, "sending HTTP request")
+		return ExResponse{-1, "", map[string]string{}}, errors.Wrap(err, "sending HTTP request")
 	}
 	defer resp.Body.Close()
 
 	if outputOptions.PrintResponseHeader {
 		if err := printer.PrintStatusLine(resp.Proto, resp.Status, resp.StatusCode); err != nil {
-			return -1, err
+			return ExResponse{-1, "", map[string]string{}}, err
 		}
 		if err := printer.PrintHeader(resp.Header); err != nil {
-			return -1, err
+			return ExResponse{-1, "", map[string]string{}}, err
 		}
 		writer.Flush()
 	}
@@ -184,29 +190,30 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 		file := output.NewFileWriter(in.URL, outputOptions)
 
 		if err := printer.PrintDownload(resp.ContentLength, file.Filename()); err != nil {
-			return -1, err
+			return ExResponse{-1, "", map[string]string{}}, err
 		}
 		writer.Flush()
 
 		if err = file.Download(resp); err != nil {
-			return -1, err
+			return ExResponse{-1, "", map[string]string{}}, err
 		}
 	} else {
 		if outputOptions.PrintResponseBody {
 			if err := printer.PrintBody(resp.Body, resp.Header.Get("Content-Type")); err != nil {
-				return -1, err
+				return ExResponse{-1, "", map[string]string{}}, err
 			}
 		}
 	}
 
+	respBody := ""
 	switch printer.(type) {
 	case *output.PrettyPrinter:
 		pp := printer.(*output.PrettyPrinter)
-		fmt.Println(pp.BodyContent)
+		respBody = pp.BodyContent
 	case *output.PlainPrinter:
 		pp := printer.(*output.PlainPrinter)
-		fmt.Println(pp.BodyContent)
+		respBody = pp.BodyContent
 	}
 
-	return resp.StatusCode, nil
+	return ExResponse{resp.StatusCode, respBody, map[string]string{}}, nil
 }
