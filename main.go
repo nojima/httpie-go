@@ -42,7 +42,7 @@ func Lama2Entry(cmdArgs []string, stdinBody io.Reader) (ExResponse, error) {
 
 	// this shouldn't be hardcoded, but for testing
 	// we are keeping it in this way
-	inputOptions.ReadStdin = true
+	// inputOptions.ReadStdin = true
 
 	// Parse positional arguments
 	in, err := input.ParseArgs(args, stdinBody, &inputOptions)

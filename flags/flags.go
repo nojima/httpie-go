@@ -96,7 +96,7 @@ func parse(args []string, terminalInfo terminalInfo) ([]string, Usage, *OptionSe
 	}
 
 	// Check stdin
-	if !ignoreStdin && !terminalInfo.stdinIsTerminal {
+	if !ignoreStdin {
 		inputOptions.ReadStdin = true
 	}
 
