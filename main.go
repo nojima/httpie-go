@@ -215,5 +215,12 @@ func Exchange(in *input.Input, exchangeOptions *exchange.Options, outputOptions 
 		respBody = pp.BodyContent
 	}
 
-	return ExResponse{resp.StatusCode, respBody, map[string]string{}}, nil
+	headerMap := make(map[string]string, 0)
+	for name, values := range resp.Header {
+		for _, value := range values {
+			headerMap[name] = value
+		}
+	}
+
+	return ExResponse{resp.StatusCode, respBody, headerMap}, nil
 }
