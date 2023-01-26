@@ -144,15 +144,18 @@ func isJSON(contentType string) bool {
 }
 
 func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
-	// Fallback to PlainPrinter when the body is not JSON
-	if !isJSON(contentType) {
-		return p.plain.PrintBody(body, contentType)
-	}
+	var buf bytes.Buffer
+	tee := io.TeeReader(body, &buf)
 
-	content, err := ioutil.ReadAll(body)
+	content, err := ioutil.ReadAll(tee)
 	p.BodyContent = strings.Clone(string(content))
 	if err != nil {
 		return errors.Wrap(err, "reading body")
+	}
+
+	// Fallback to PlainPrinter when the body is not JSON
+	if !isJSON(contentType) {
+		return p.plain.PrintBody(body, contentType)
 	}
 
 	// decode JSON creating a new "token buffer" from which we will pretty-print
