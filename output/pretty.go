@@ -144,18 +144,17 @@ func isJSON(contentType string) bool {
 }
 
 func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
-	var buf bytes.Buffer
-	tee := io.TeeReader(body, &buf)
+	// Fallback to PlainPrinter when the body is not JSON
+	if !isJSON(contentType) {
+		content2, _ := ioutil.ReadAll(body)
+		p.BodyContent = string(content2)
+		return p.plain.PrintBody(bytes.NewReader(content2), contentType)
+	}
 
-	content, err := ioutil.ReadAll(tee)
+	content, err := ioutil.ReadAll(body)
 	p.BodyContent = strings.Clone(string(content))
 	if err != nil {
 		return errors.Wrap(err, "reading body")
-	}
-
-	// Fallback to PlainPrinter when the body is not JSON
-	if !isJSON(contentType) {
-		return p.plain.PrintBody(body, contentType)
 	}
 
 	// decode JSON creating a new "token buffer" from which we will pretty-print
@@ -166,7 +165,6 @@ func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
 		p.writer.Write(content)
 		return nil
 	}
-
 	err = p.printJSON(toks, 0)
 	// errMalformedJSON errors can be ignored. This is because the JSON is
 	// pre-tokenized, and therefore errMalformedJSON errors only occur when
@@ -174,7 +172,6 @@ func (p *PrettyPrinter) PrintBody(body io.Reader, contentType string) error {
 	if err != nil && !errors.Is(err, errMalformedJSON) {
 		return err
 	}
-
 	fmt.Fprintln(p.writer)
 	return nil
 }
