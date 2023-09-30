@@ -10,9 +10,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/vbauerster/mpb/v5"
-	"github.com/vbauerster/mpb/v5/decor"
 )
 
 type FileWriter struct {
@@ -59,10 +56,46 @@ func makeNonOverlappingFilename(path string) string {
 	return path
 }
 
-func (f *FileWriter) Download(resp *http.Response) error {
-	// Create new progress bar
-	pb := mpb.New(mpb.WithWidth(60))
+// func (f *FileWriter) Download(resp *http.Response) error {
+// 	// Create new progress bar
+// 	pb := mpb.New(mpb.WithWidth(60))
 
+// 	// Create file
+// 	file, err := os.Create(f.fullPath)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer file.Close()
+
+// 	// Parameters of th new progress bar
+// 	bar := pb.AddBar(resp.ContentLength,
+// 		mpb.PrependDecorators(
+// 			decor.CountersKiloByte("% .2f / % .2f "),
+// 			decor.AverageSpeed(decor.UnitKB, "(% .2f)"),
+// 		),
+// 		mpb.AppendDecorators(
+// 			decor.Percentage(),
+// 			decor.Name(" - "),
+// 			decor.Elapsed(decor.ET_STYLE_GO, decor.WC{W: 4}),
+// 			decor.Name(" - "),
+// 			decor.OnComplete(
+// 				decor.AverageETA(decor.ET_STYLE_GO, decor.WC{W: 4}), "done",
+// 			),
+// 		),
+// 	)
+
+// 	// Update progress bar while writing file
+// 	_, err = io.Copy(file, bar.ProxyReader(resp.Body))
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	pb.Wait()
+
+// 	return nil
+// }
+
+func (f *FileWriter) Download(resp *http.Response) error {
 	// Create file
 	file, err := os.Create(f.fullPath)
 	if err != nil {
@@ -70,31 +103,40 @@ func (f *FileWriter) Download(resp *http.Response) error {
 	}
 	defer file.Close()
 
-	// Parameters of th new progress bar
-	bar := pb.AddBar(resp.ContentLength,
-		mpb.PrependDecorators(
-			decor.CountersKiloByte("% .2f / % .2f "),
-			decor.AverageSpeed(decor.UnitKB, "(% .2f)"),
-		),
-		mpb.AppendDecorators(
-			decor.Percentage(),
-			decor.Name(" - "),
-			decor.Elapsed(decor.ET_STYLE_GO, decor.WC{W: 4}),
-			decor.Name(" - "),
-			decor.OnComplete(
-				decor.AverageETA(decor.ET_STYLE_GO, decor.WC{W: 4}), "done",
-			),
-		),
-	)
-
-	// Update progress bar while writing file
-	_, err = io.Copy(file, bar.ProxyReader(resp.Body))
-	if err != nil {
+	// Get content length for progress calculation
+	contentLength := resp.ContentLength
+	if contentLength <= 0 {
+		// If content length is not provided, just copy the content without progress
+		_, err = io.Copy(file, resp.Body)
 		return err
 	}
 
-	pb.Wait()
+	// Buffer for reading chunks of data
+	buf := make([]byte, 4096)
+	var totalRead int64
 
+	for {
+		n, err := resp.Body.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if n == 0 {
+			break
+		}
+
+		// Write the read chunk to the file
+		_, err = file.Write(buf[:n])
+		if err != nil {
+			return err
+		}
+
+		// Update total read and print progress
+		totalRead += int64(n)
+		percentage := (totalRead * 100) / contentLength
+		fmt.Printf("\rProgress: %d%%", percentage)
+	}
+
+	fmt.Println("\nDownload complete!")
 	return nil
 }
 

@@ -57,11 +57,11 @@ var Licenses = []License{
 		LicenseName: "MIT License",
 		Link:        "https://github.com/acarl005/stripansi/blob/master/LICENSE",
 	},
-	{
-		ModuleName:  "mpb",
-		LicenseName: "Unlicense",
-		Link:        "https://github.com/vbauerster/mpb/blob/master/UNLICENSE",
-	},
+	// {
+	// 	ModuleName:  "mpb",
+	// 	LicenseName: "Unlicense",
+	// 	Link:        "https://github.com/vbauerster/mpb/blob/master/UNLICENSE",
+	// },
 }
 
 func PrintLicenses(w io.Writer) {
